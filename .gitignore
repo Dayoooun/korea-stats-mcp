@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment (API keys 등 민감정보)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Cache
+.cache/
+*.cache
+
+# Test
+coverage/
+playwright-report/
+test-results/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vercel
+.vercel/
+
+# Development only
+extract_pdf.py
+package-lock.json
+MCP_EVALUATION_REPORT*.md
+
+# API docs (대용량 PDF)
+api-docs/
+
+# Table metadata (개발 참고용)
+data/table-meta/
