@@ -139,17 +139,6 @@ pnpm run build
 
 ---
 
-### 방법 3: Kakao PlayMCP 등록
-
-[Kakao PlayMCP](https://playmcp.com)에서 원격 MCP로 등록할 수 있습니다.
-
-**MCP Server URL:**
-```
-https://korea-stats-mcp-yxup.vercel.app/mcp
-```
-
----
-
 ## 💬 사용 예시
 
 연결 후 AI에게 자연어로 질문하세요:
@@ -263,9 +252,6 @@ pnpm run dev
 
 # MCP Inspector로 테스트
 pnpm run inspector
-
-# E2E 테스트
-node e2e-test.js
 ```
 
 ### 프로젝트 구조
