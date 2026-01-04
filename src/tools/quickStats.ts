@@ -111,7 +111,8 @@ export async function quickStats(input: QuickStatsInput): Promise<QuickStatsResu
         objL2: param.objL2,
         itemId: param.itemId,
         periodType: 'Y',
-        recentCount: 1,
+        recentCount: input.year ? undefined : 1,
+        year: input.year, // 캐시 키에 year 포함
       },
       async () => {
         return client.getStatisticsData({
