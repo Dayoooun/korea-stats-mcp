@@ -2,12 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io/)
-[![Node](https://img.shields.io/badge/Node-%3E%3D20-green)](https://nodejs.org/)
+[![Deploy](https://img.shields.io/badge/Vercel-Deployed-black)](https://korea-stats-mcp-yxup.vercel.app/)
 
-> **AI가 한국 통계를 이해하도록 돕는 MCP 서버**
+> **자연어로 KOSIS 통계를 조회하는 MCP 서버**
 
 통계청 KOSIS OpenAPI 기반의 MCP(Model Context Protocol) 서버입니다.
 Claude, Cursor, Windsurf 등 AI 도구에서 **자연어로 한국 통계 데이터**를 검색하고 분석할 수 있습니다.
+
+**🌐 원격 서버 URL:** `https://korea-stats-mcp-yxup.vercel.app/mcp`
 
 ---
 
@@ -16,17 +18,10 @@ Claude, Cursor, Windsurf 등 AI 도구에서 **자연어로 한국 통계 데이
 AI에게 **"한국 인구가 몇 명이야?"** 라고 물으면, AI는 학습 데이터의 오래된 정보를 답합니다.
 Korea Stats MCP를 연결하면 **실시간 공식 통계**를 조회해서 정확한 답변을 제공합니다.
 
-### Before (MCP 없이)
-```
-Q: 한국 인구가 몇 명이야?
-A: 2023년 기준 약 5,100만 명입니다. (outdated)
-```
-
-### After (Korea Stats MCP 연결)
-```
-Q: 한국 인구가 몇 명이야?
-A: 2024년 한국의 총인구는 51,712,619명입니다. (KOSIS 실시간 조회)
-```
+| Before (MCP 없이) | After (Korea Stats MCP 연결) |
+|-------------------|------------------------------|
+| Q: 한국 인구가 몇 명이야? | Q: 한국 인구가 몇 명이야? |
+| A: 2023년 기준 약 5,100만 명입니다. ❌ | A: 2024년 한국의 총인구는 51,712,619명입니다. ✅ |
 
 ---
 
@@ -42,13 +37,73 @@ A: 2024년 한국의 총인구는 51,712,619명입니다. (KOSIS 실시간 조�
 
 ---
 
-## 🚀 빠른 시작
+## 🚀 사용 방법
 
-### 1. 설치
+### 방법 1: 원격 서버 사용 (설치 없이 바로 사용) ⭐ 권장
+
+설치 없이 원격 MCP 서버에 바로 연결할 수 있습니다.
+
+#### Claude Desktop
+
+`claude_desktop_config.json` 파일 위치:
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "korea-stats": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://korea-stats-mcp-yxup.vercel.app/mcp"
+      ]
+    }
+  }
+}
+```
+
+#### Cursor
+
+설정 → MCP → Add new MCP server:
+
+```json
+{
+  "korea-stats": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "mcp-remote",
+      "https://korea-stats-mcp-yxup.vercel.app/mcp"
+    ]
+  }
+}
+```
+
+#### Windsurf
+
+MCP 설정에 추가:
+
+```json
+{
+  "korea-stats": {
+    "serverUrl": "https://korea-stats-mcp-yxup.vercel.app/mcp"
+  }
+}
+```
+
+---
+
+### 방법 2: 로컬 설치
+
+직접 서버를 실행하고 싶다면 로컬에 설치할 수 있습니다.
+
+#### 1단계: 설치
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-username/korea-stats-mcp.git
+git clone https://github.com/Dayoooun/korea-stats-mcp.git
 cd korea-stats-mcp
 
 # 의존성 설치 (pnpm 권장)
@@ -58,33 +113,44 @@ pnpm install
 pnpm run build
 ```
 
-### 2. AI 도구에 연결
+#### 2단계: AI 도구에 연결
 
-#### Claude Desktop
-`claude_desktop_config.json`에 추가:
+**Claude Desktop** (`claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
     "korea-stats": {
       "command": "node",
-      "args": ["/path/to/korea-stats-mcp/dist/index.js"]
+      "args": ["/절대경로/korea-stats-mcp/dist/index.js"]
     }
   }
 }
 ```
 
-#### Cursor
-설정 → MCP Servers에서 추가:
+**Cursor** (설정 → MCP Servers):
 ```json
 {
   "korea-stats": {
     "command": "node",
-    "args": ["/path/to/korea-stats-mcp/dist/index.js"]
+    "args": ["/절대경로/korea-stats-mcp/dist/index.js"]
   }
 }
 ```
 
-### 3. 사용하기
+---
+
+### 방법 3: Kakao PlayMCP 등록
+
+[Kakao PlayMCP](https://playmcp.com)에서 원격 MCP로 등록할 수 있습니다.
+
+**MCP Server URL:**
+```
+https://korea-stats-mcp-yxup.vercel.app/mcp
+```
+
+---
+
+## 💬 사용 예시
 
 연결 후 AI에게 자연어로 질문하세요:
 
@@ -93,6 +159,14 @@ pnpm run build
 "서울 실업률 알려줘"
 "최근 10년 출산율 추이 보여줘"
 "GDP 성장률은?"
+"부산과 대구 인구 비교해줘"
+```
+
+**실제 응답 예시:**
+```
+✅ "2024년 한국의 총인구는 51,712,619명입니다."
+✅ "2024년 서울의 실업률은 3.2%입니다."
+✅ "2024년 합계출산율은 0.748명으로, 2015년 1.24명에서 39.7% 감소했습니다."
 ```
 
 ---
@@ -100,42 +174,43 @@ pnpm run build
 ## 📊 지원하는 통계 (43개 키워드)
 
 ### 인구/출산/사망
-| 키워드 | 설명 | 예시 질문 |
-|--------|------|-----------|
-| `인구`, `총인구` | 총인구수 | "한국 인구 몇 명?" |
-| `출산율`, `합계출산율` | 합계출산율 | "올해 출산율은?" |
-| `출생아수`, `출생아` | 출생아 수 | "출생아 수 추이" |
-| `사망자수`, `사망률` | 사망자 수 | "사망률 통계" |
-| `기대수명`, `평균수명` | 기대여명 | "평균수명이 몇 살?" |
+| 키워드 | 설명 |
+|--------|------|
+| `인구`, `총인구` | 총인구수 |
+| `출산율`, `합계출산율` | 합계출산율 |
+| `출생아수`, `출생아`, `조출생률` | 출생 통계 |
+| `사망자수`, `사망자`, `조사망률`, `사망률` | 사망 통계 |
+| `자연증가`, `자연증가율` | 자연증감 |
+| `기대수명`, `기대여명`, `평균수명` | 기대수명 |
 
 ### 혼인/이혼
-| 키워드 | 설명 | 예시 질문 |
-|--------|------|-----------|
-| `혼인율`, `혼인건수` | 혼인 통계 | "혼인율 추이" |
-| `이혼율`, `이혼건수` | 이혼 통계 | "이혼율 알려줘" |
+| 키워드 | 설명 |
+|--------|------|
+| `혼인율`, `혼인건수`, `조혼인율` | 혼인 통계 |
+| `이혼율`, `이혼건수`, `조이혼율` | 이혼 통계 |
 
 ### 고용/노동
-| 키워드 | 설명 | 예시 질문 |
-|--------|------|-----------|
-| `실업률` | 실업률 | "실업률이 몇 %?" |
-| `고용률` | 고용률 | "고용률 추이" |
-| `취업자수`, `취업자` | 취업자 수 | "취업자 몇 명?" |
-| `실업자수`, `실업자` | 실업자 수 | "실업자 현황" |
-| `경제활동인구` | 경제활동인구 | "경제활동인구 통계" |
+| 키워드 | 설명 |
+|--------|------|
+| `실업률` | 실업률 |
+| `고용률` | 고용률 |
+| `취업자수`, `취업자` | 취업자 수 |
+| `실업자수`, `실업자` | 실업자 수 |
+| `경제활동인구`, `비경제활동인구` | 경제활동인구 |
 
 ### 경제
-| 키워드 | 설명 | 예시 질문 |
-|--------|------|-----------|
-| `GDP`, `국내총생산` | GDP | "한국 GDP?" |
-| `경제성장률`, `성장률` | 경제성장률 | "올해 성장률은?" |
-| `물가`, `소비자물가` | 소비자물가지수 | "물가 상승률" |
+| 키워드 | 설명 |
+|--------|------|
+| `GDP`, `국내총생산` | GDP |
+| `경제성장률`, `성장률`, `GDP성장률` | 경제성장률 |
+| `물가`, `소비자물가`, `소비자물가지수` | 소비자물가 |
 
 ### 무역
-| 키워드 | 설명 | 예시 질문 |
-|--------|------|-----------|
-| `수출액`, `수출` | 수출액 | "수출 현황" |
-| `수입액`, `수입` | 수입액 | "수입 통계" |
-| `무역수지` | 무역수지 | "무역수지 추이" |
+| 키워드 | 설명 |
+|--------|------|
+| `수출액`, `수출` | 수출액 |
+| `수입액`, `수입` | 수입액 |
+| `무역수지` | 무역수지 |
 
 ---
 
@@ -143,6 +218,10 @@ pnpm run build
 
 17개 광역시도별 통계를 조회할 수 있습니다:
 
+**지원 지역:**
+전국, 서울, 부산, 대구, 인천, 광주, 대전, 울산, 세종, 경기, 강원, 충북, 충남, 전북, 전남, 경북, 경남, 제주
+
+**예시:**
 ```
 "서울 인구"
 "부산 실업률"
@@ -150,32 +229,16 @@ pnpm run build
 "경기도 고용률"
 ```
 
-**지원 지역:** 전국, 서울, 부산, 대구, 인천, 광주, 대전, 울산, 세종, 경기, 강원, 충북, 충남, 전북, 전남, 경북, 경남, 제주
-
 ---
 
-## 🛠️ 제공 도구 (Tools)
+## 🛠️ 제공 도구 (8개)
 
 ### 핵심 도구 ⭐
 
-#### `quick_stats` - 빠른 통계 조회
-```json
-{
-  "query": "실업률",
-  "region": "서울",
-  "year": 2024
-}
-```
-→ "2024년 서울의 실업률은 3.2%입니다."
-
-#### `quick_trend` - 추세 분석
-```json
-{
-  "keyword": "출산율",
-  "yearCount": 10
-}
-```
-→ 10년간 출산율 추이 및 변화율 분석
+| 도구 | 설명 | 예시 |
+|------|------|------|
+| `quick_stats` | 43개 키워드 빠른 조회 | "실업률", "GDP" |
+| `quick_trend` | 시계열 추세 분석 | "출산율 10년 추이" |
 
 ### 고급 도구
 
@@ -210,28 +273,28 @@ node e2e-test.js
 ```
 korea-stats-mcp/
 ├── src/
-│   ├── index.ts          # 진입점
-│   ├── server.ts         # MCP 서버 설정
-│   ├── tools/            # 도구 구현
-│   │   ├── quickStats.ts # 빠른 조회
-│   │   ├── quickTrend.ts # 추세 분석
+│   ├── index.ts              # 진입점 (stdio 트랜스포트)
+│   ├── server.ts             # MCP 서버 설정
+│   ├── tools/                # 8개 도구 구현
+│   │   ├── quickStats.ts     # 빠른 조회
+│   │   ├── quickTrend.ts     # 추세 분석
 │   │   └── ...
 │   ├── data/
 │   │   └── quickStatsParams.ts  # 43개 키워드 매핑
 │   └── api/
-│       └── client.ts     # KOSIS API 클라이언트
+│       └── client.ts         # KOSIS API 클라이언트
 ├── api/
-│   └── mcp.ts            # Vercel 서버리스 엔드포인트
-└── tests/                # Playwright 테스트
+│   └── mcp.ts                # Vercel 서버리스 (원격 MCP)
+└── tests/                    # Playwright 테스트
 ```
 
-### 키워드 추가하기
+### 새 키워드 추가하기
 
 `src/data/quickStatsParams.ts`에 새 키워드를 추가할 수 있습니다:
 
 ```typescript
 '새키워드': {
-  orgId: '101',           // 기관 코드
+  orgId: '101',           // 기관 코드 (101 = 통계청)
   tableId: 'DT_XXXXX',    // 통계표 ID
   tableName: '통계표명',
   description: '설명',
@@ -240,21 +303,6 @@ korea-stats-mcp/
   unit: '단위',
 }
 ```
-
----
-
-## 🌐 Vercel 배포 (원격 MCP)
-
-GitHub 연결 후 Vercel에서 자동 배포됩니다.
-
-```bash
-# Vercel CLI로 배포
-vercel --prod
-```
-
-배포 후 URL: `https://your-project.vercel.app/mcp`
-
-이 URL을 Kakao PlayMCP 등에 등록하여 원격 MCP로 사용할 수 있습니다.
 
 ---
 
@@ -280,7 +328,7 @@ vercel --prod
 ### 기여 아이디어
 
 - [ ] 새로운 통계 키워드 추가
-- [ ] 영문 키워드 지원
+- [ ] 영문 키워드 지원 (population, unemployment 등)
 - [ ] 지역명 풀네임 지원 (서울특별시 → 서울)
 - [ ] 더 많은 테스트 케이스
 
@@ -303,8 +351,11 @@ vercel --prod
 
 ## 💬 문의
 
-이슈나 질문이 있으시면 [GitHub Issues](https://github.com/your-username/korea-stats-mcp/issues)에 등록해 주세요.
+이슈나 질문이 있으시면 [GitHub Issues](https://github.com/Dayoooun/korea-stats-mcp/issues)에 등록해 주세요.
 
 ---
 
-**Made with ❤️ for Korean Statistics**
+<p align="center">
+  <b>Made with ❤️ for Korean Statistics</b><br>
+  <sub>KOSIS OpenAPI 기반 | MCP Compatible</sub>
+</p>
