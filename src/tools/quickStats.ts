@@ -17,11 +17,11 @@ import {
 export const quickStatsSchema = {
   name: 'quick_stats',
   description:
-    '자주 묻는 통계를 한 번에 조회합니다. "한국 실업률", "출산율", "인구" 같은 간단한 질문에 바로 답변합니다. 내부적으로 검색, 테이블 정보 조회, 데이터 조회를 자동으로 수행합니다.',
+    '자주 묻는 통계를 한 번에 조회합니다. "한국 실업률", "출산율", "인구" 같은 간단한 질문에 바로 답변합니다. 특정 연도 조회 시 year 파라미터를 반드시 사용하세요 (예: "2010년 GDP" → year: 2010).',
   inputSchema: z.object({
     query: z
       .string()
-      .describe('자연어 질문. 예: "한국 실업률", "서울 인구", "출산율", "GDP"'),
+      .describe('통계 키워드. 예: "실업률", "인구", "출산율", "GDP"'),
     region: z
       .string()
       .optional()
@@ -29,7 +29,7 @@ export const quickStatsSchema = {
     year: z
       .number()
       .optional()
-      .describe('연도 (선택, 미지정시 최근 데이터)'),
+      .describe('조회할 연도 (선택, 미지정시 최근 데이터). 질문에 연도가 포함되면 반드시 추출하여 전달. 예: "2010년 GDP" → year: 2010'),
   }),
 };
 
