@@ -252,6 +252,9 @@ pnpm run dev
 
 # MCP Inspector로 테스트
 pnpm run inspector
+
+# E2E 테스트
+node e2e-test.js
 ```
 
 ### 프로젝트 구조
