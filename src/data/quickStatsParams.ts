@@ -16,7 +16,100 @@ export interface QuickStatsParam {
   unit: string;         // 단위
   // 지역별 코드 매핑 (선택)
   regionCodes?: Record<string, string>;
+  // 지원하는 주기 (기본: ['Y'])
+  supportedPeriods?: ('Y' | 'Q' | 'M')[];
 }
+
+// ===== 공통 지역 코드 상수 =====
+// 테이블마다 지역 코드 체계가 다를 수 있음
+
+/** 인구동향/출산율/혼인율 등에서 사용하는 지역 코드 */
+export const REGION_CODES_DEMOGRAPHIC: Record<string, string> = {
+  '전국': '00',
+  '서울': '11',
+  '부산': '21',
+  '대구': '22',
+  '인천': '23',
+  '광주': '24',
+  '대전': '25',
+  '울산': '26',
+  '세종': '29',
+  '경기': '31',
+  '강원': '32',
+  '충북': '33',
+  '충남': '34',
+  '전북': '35',
+  '전남': '36',
+  '경북': '37',
+  '경남': '38',
+  '제주': '39',
+};
+
+/** 인구(주민등록)에서 사용하는 지역 코드 */
+export const REGION_CODES_POPULATION: Record<string, string> = {
+  '전국': '00',
+  '서울': '11',
+  '부산': '26',
+  '대구': '27',
+  '인천': '28',
+  '광주': '29',
+  '대전': '30',
+  '울산': '31',
+  '세종': '36',
+  '경기': '41',
+  '강원': '51',
+  '충북': '43',
+  '충남': '44',
+  '전북': '52',
+  '전남': '46',
+  '경북': '47',
+  '경남': '48',
+  '제주': '50',
+};
+
+/** 물가지수에서 사용하는 지역 코드 */
+export const REGION_CODES_CPI: Record<string, string> = {
+  '전국': 'T10',
+  '서울': 'T11',
+  '부산': 'T12',
+  '대구': 'T13',
+  '인천': 'T14',
+  '광주': 'T15',
+  '대전': 'T16',
+  '울산': 'T17',
+  '세종': 'T18',
+  '경기': 'T21',
+  '강원': 'T31',
+  '충북': 'T41',
+  '충남': 'T51',
+  '전북': 'T61',
+  '전남': 'T71',
+  '경북': 'T81',
+  '경남': 'T90',
+  '제주': 'T96',
+};
+
+/** 주택/아파트 가격지수에서 사용하는 지역 코드 */
+export const REGION_CODES_HOUSING: Record<string, string> = {
+  '전국': 'a0',
+  '서울': 'a7',
+  '경기': 'a8',
+  '인천': 'a9',
+  '부산': 'b1',
+  '대구': 'b2',
+  '광주': 'b3',
+  '대전': 'b4',
+  '울산': 'b5',
+  '세종': 'b6',
+  '강원': 'c1',
+  '충북': 'c2',
+  '충남': 'c3',
+  '전북': 'c4',
+  '전남': 'c5',
+  '경북': 'c6',
+  '경남': 'c7',
+  '제주': 'c8',
+};
 
 /**
  * 검증된 Quick Stats 파라미터
@@ -33,26 +126,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',          // 전국 (C1: "00")
     itemId: 'T20',        // 총인구수 (ITM_ID: "T20")
     unit: '명',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '26',
-      '대구': '27',
-      '인천': '28',
-      '광주': '29',
-      '대전': '30',
-      '울산': '31',
-      '세종': '36',
-      '경기': '41',
-      '강원': '51',
-      '충북': '43',
-      '충남': '44',
-      '전북': '52',
-      '전남': '46',
-      '경북': '47',
-      '경남': '48',
-      '제주': '50',
-    },
+    regionCodes: REGION_CODES_POPULATION,
   },
   '총인구': {
     orgId: '101',
@@ -62,26 +136,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',
     itemId: 'T20',
     unit: '명',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '26',
-      '대구': '27',
-      '인천': '28',
-      '광주': '29',
-      '대전': '30',
-      '울산': '31',
-      '세종': '36',
-      '경기': '41',
-      '강원': '51',
-      '충북': '43',
-      '충남': '44',
-      '전북': '52',
-      '전남': '46',
-      '경북': '47',
-      '경남': '48',
-      '제주': '50',
-    },
+    regionCodes: REGION_CODES_POPULATION,
   },
 
   // ===== 출산율 관련 =====
@@ -94,26 +149,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',          // 전국 (OBJ_ID: "A")
     itemId: 'T1',         // 합계출산율 (OBJ_ID: "ITEM")
     unit: '명',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '21',
-      '대구': '22',
-      '인천': '23',
-      '광주': '24',
-      '대전': '25',
-      '울산': '26',
-      '세종': '29',
-      '경기': '31',
-      '강원': '32',
-      '충북': '33',
-      '충남': '34',
-      '전북': '35',
-      '전남': '36',
-      '경북': '37',
-      '경남': '38',
-      '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
   },
   '합계출산율': {
     orgId: '101',
@@ -123,30 +159,11 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',
     itemId: 'T1',
     unit: '명',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '21',
-      '대구': '22',
-      '인천': '23',
-      '광주': '24',
-      '대전': '25',
-      '울산': '26',
-      '세종': '29',
-      '경기': '31',
-      '강원': '32',
-      '충북': '33',
-      '충남': '34',
-      '전북': '35',
-      '전남': '36',
-      '경북': '37',
-      '경남': '38',
-      '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
   },
 
   // ===== 고용 관련 =====
-  // DT_1DA7004S: 행정구역(시도)별 경제활동인구 (1999~2025, 시도별 지원)
+  // DT_1DA7004S: 행정구역(시도)별 경제활동인구 (1999~2025, 시도별 지원, 월/분기/연 모두 지원)
   '실업률': {
     orgId: '101',
     tableId: 'DT_1DA7004S',
@@ -155,26 +172,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',          // 전국 (OBJ_ID: "A")
     itemId: 'T80',        // 실업률 (%)
     unit: '%',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '21',
-      '대구': '22',
-      '인천': '23',
-      '광주': '24',
-      '대전': '25',
-      '울산': '26',
-      '세종': '29',
-      '경기': '31',
-      '강원': '32',
-      '충북': '33',
-      '충남': '34',
-      '전북': '35',
-      '전남': '36',
-      '경북': '37',
-      '경남': '38',
-      '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '고용률': {
     orgId: '101',
@@ -184,26 +183,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',          // 전국 (OBJ_ID: "A")
     itemId: 'T90',        // 고용률 (%)
     unit: '%',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '21',
-      '대구': '22',
-      '인천': '23',
-      '광주': '24',
-      '대전': '25',
-      '울산': '26',
-      '세종': '29',
-      '경기': '31',
-      '강원': '32',
-      '충북': '33',
-      '충남': '34',
-      '전북': '35',
-      '전남': '36',
-      '경북': '37',
-      '경남': '38',
-      '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
 
   // ===== 경제 관련 =====
@@ -236,26 +217,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '0',           // 총지수 (OBJ_ID: "D" - 지출목적별, 0=총지수)
     itemId: 'T',          // 소비자물가지수 (OBJ_ID: "ITEM")
     unit: '2020=100',
-    regionCodes: {
-      '전국': 'T10',
-      '서울': 'T11',
-      '부산': 'T12',
-      '대구': 'T13',
-      '인천': 'T14',
-      '광주': 'T15',
-      '대전': 'T16',
-      '울산': 'T17',
-      '세종': 'T18',
-      '경기': 'T21',
-      '강원': 'T31',
-      '충북': 'T41',
-      '충남': 'T51',
-      '전북': 'T61',
-      '전남': 'T71',
-      '경북': 'T81',
-      '경남': 'T90',
-      '제주': 'T96',
-    },
+    regionCodes: REGION_CODES_CPI,
+    supportedPeriods: ['Y', 'M'],
   },
   '소비자물가': {
     orgId: '101',
@@ -266,26 +229,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '0',           // 총지수
     itemId: 'T',
     unit: '2020=100',
-    regionCodes: {
-      '전국': 'T10',
-      '서울': 'T11',
-      '부산': 'T12',
-      '대구': 'T13',
-      '인천': 'T14',
-      '광주': 'T15',
-      '대전': 'T16',
-      '울산': 'T17',
-      '세종': 'T18',
-      '경기': 'T21',
-      '강원': 'T31',
-      '충북': 'T41',
-      '충남': 'T51',
-      '전북': 'T61',
-      '전남': 'T71',
-      '경북': 'T81',
-      '경남': 'T90',
-      '제주': 'T96',
-    },
+    regionCodes: REGION_CODES_CPI,
+    supportedPeriods: ['Y', 'M'],
   },
   '소비자물가지수': {
     orgId: '101',
@@ -296,26 +241,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '0',           // 총지수
     itemId: 'T',
     unit: '2020=100',
-    regionCodes: {
-      '전국': 'T10',
-      '서울': 'T11',
-      '부산': 'T12',
-      '대구': 'T13',
-      '인천': 'T14',
-      '광주': 'T15',
-      '대전': 'T16',
-      '울산': 'T17',
-      '세종': 'T18',
-      '경기': 'T21',
-      '강원': 'T31',
-      '충북': 'T41',
-      '충남': 'T51',
-      '전북': 'T61',
-      '전남': 'T71',
-      '경북': 'T81',
-      '경남': 'T90',
-      '제주': 'T96',
-    },
+    regionCodes: REGION_CODES_CPI,
+    supportedPeriods: ['Y', 'M'],
   },
 
   // ===== 혼인 관련 =====
@@ -327,26 +254,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',          // 전국
     itemId: 'T10',        // 남편 기준 혼인율
     unit: '‰',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '26',
-      '대구': '27',
-      '인천': '28',
-      '광주': '29',
-      '대전': '30',
-      '울산': '31',
-      '세종': '36',
-      '경기': '41',
-      '강원': '51',
-      '충북': '43',
-      '충남': '44',
-      '전북': '52',
-      '전남': '46',
-      '경북': '47',
-      '경남': '48',
-      '제주': '50',
-    },
+    regionCodes: REGION_CODES_POPULATION,
   },
 
   // ===== 수명 관련 =====
@@ -387,26 +295,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',          // 전국
     itemId: 'T10',        // 수출액
     unit: '100만달러',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '21',
-      '대구': '22',
-      '인천': '23',
-      '광주': '24',
-      '대전': '25',
-      '울산': '26',
-      '세종': '29',
-      '경기': '31',
-      '강원': '32',
-      '충북': '33',
-      '충남': '34',
-      '전북': '35',
-      '전남': '36',
-      '경북': '37',
-      '경남': '38',
-      '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
   },
   '수출': {
     orgId: '101',
@@ -416,26 +305,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',
     itemId: 'T10',
     unit: '100만달러',
-    regionCodes: {
-      '전국': '00',
-      '서울': '11',
-      '부산': '21',
-      '대구': '22',
-      '인천': '23',
-      '광주': '24',
-      '대전': '25',
-      '울산': '26',
-      '세종': '29',
-      '경기': '31',
-      '강원': '32',
-      '충북': '33',
-      '충남': '34',
-      '전북': '35',
-      '전남': '36',
-      '경북': '37',
-      '경남': '38',
-      '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
   },
 
   // ===== 수입 관련 =====
@@ -468,7 +338,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
   },
 
   // ===== 인구동향 (출생/사망/혼인/이혼) =====
-  // DT_1B8000G: 종합 인구동향 테이블
+  // DT_1B8000G: 종합 인구동향 테이블 (월/분기/연 모두 지원)
   // objL1 = 지역코드 (B), objL2 = 종류코드 (A), itmId = T1
   '출생아수': {
     orgId: '101',
@@ -479,13 +349,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '10',            // 출생아수(명) (종류)
     itemId: 'T1',
     unit: '명',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '출생아': {
     orgId: '101',
@@ -496,13 +361,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '10',
     itemId: 'T1',
     unit: '명',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '조출생률': {
     orgId: '101',
@@ -513,13 +373,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '11',            // 조출생률(천명당)
     itemId: 'T1',
     unit: '‰',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '사망자수': {
     orgId: '101',
@@ -530,13 +385,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '15',            // 사망자수(명)
     itemId: 'T1',
     unit: '명',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '사망자': {
     orgId: '101',
@@ -547,13 +397,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '15',
     itemId: 'T1',
     unit: '명',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '조사망률': {
     orgId: '101',
@@ -564,13 +409,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '16',            // 조사망률(천명당)
     itemId: 'T1',
     unit: '‰',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '사망률': {
     orgId: '101',
@@ -581,13 +421,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '16',
     itemId: 'T1',
     unit: '‰',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '이혼건수': {
     orgId: '101',
@@ -598,13 +433,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '30',            // 이혼건수(건)
     itemId: 'T1',
     unit: '건',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '조이혼율': {
     orgId: '101',
@@ -615,13 +445,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '31',            // 조이혼율(천명당)
     itemId: 'T1',
     unit: '‰',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '이혼율': {
     orgId: '101',
@@ -632,13 +457,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '31',
     itemId: 'T1',
     unit: '‰',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '혼인건수': {
     orgId: '101',
@@ -649,13 +469,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '20',            // 혼인건수(건)
     itemId: 'T1',
     unit: '건',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '조혼인율': {
     orgId: '101',
@@ -666,13 +481,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '21',            // 조혼인율(천명당)
     itemId: 'T1',
     unit: '‰',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '자연증가': {
     orgId: '101',
@@ -683,13 +493,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '17',            // 자연증가건수(명)
     itemId: 'T1',
     unit: '명',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
   '자연증가율': {
     orgId: '101',
@@ -700,13 +505,8 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL2: '18',            // 자연증가율(천명당)
     itemId: 'T1',
     unit: '‰',
-    regionCodes: {
-      '전국': '00', '서울': '11', '부산': '21', '대구': '22',
-      '인천': '23', '광주': '24', '대전': '25', '울산': '26',
-      '세종': '29', '경기': '31', '강원': '32', '충북': '33',
-      '충남': '34', '전북': '35', '전남': '36', '경북': '37',
-      '경남': '38', '제주': '39',
-    },
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+    supportedPeriods: ['Y', 'Q', 'M'],
   },
 
   // ===== 경제성장률 관련 =====
@@ -793,6 +593,155 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '0',
     itemId: 'T50',        // 비경제활동인구 (천명)
     unit: '천명',
+  },
+
+  // ===== 부동산 관련 =====
+  // DT_1YL13501E: 주택매매가격지수 (2003.11~, 월간)
+  '주택가격': {
+    orgId: '101',
+    tableId: 'DT_1YL13501E',
+    tableName: '주택매매가격지수(시도/시/군/구)',
+    description: '주택매매가격지수',
+    objL1: 'a0',          // 전국
+    itemId: 'sales',      // 주택매매가격지수
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '주택매매가격': {
+    orgId: '101',
+    tableId: 'DT_1YL13501E',
+    tableName: '주택매매가격지수(시도/시/군/구)',
+    description: '주택매매가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '주택가격지수': {
+    orgId: '101',
+    tableId: 'DT_1YL13501E',
+    tableName: '주택매매가격지수(시도/시/군/구)',
+    description: '주택매매가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  // DT_1YL20161E: 아파트매매가격지수 (2003.11~, 월간)
+  '아파트가격': {
+    orgId: '101',
+    tableId: 'DT_1YL20161E',
+    tableName: '아파트매매가격지수(시도/시/군/구)',
+    description: '아파트매매가격지수',
+    objL1: 'a0',          // 전국
+    itemId: 'sales',      // 아파트매매가격지수
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '아파트매매가격': {
+    orgId: '101',
+    tableId: 'DT_1YL20161E',
+    tableName: '아파트매매가격지수(시도/시/군/구)',
+    description: '아파트매매가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '아파트가격지수': {
+    orgId: '101',
+    tableId: 'DT_1YL20161E',
+    tableName: '아파트매매가격지수(시도/시/군/구)',
+    description: '아파트매매가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '아파트': {
+    orgId: '101',
+    tableId: 'DT_1YL20161E',
+    tableName: '아파트매매가격지수(시도/시/군/구)',
+    description: '아파트매매가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+
+  // ===== 임금/소득 관련 =====
+  // DT_1YL15006: 월평균 임금 및 임금상승률 (시도별, 연간)
+  '임금': {
+    orgId: '101',
+    tableId: 'DT_1YL15006',
+    tableName: '월평균 임금 및 임금상승률(시도)',
+    description: '상용근로자 월평균 임금',
+    objL1: '00',          // 전국
+    itemId: 'T001',       // 상용 월평균 임금
+    unit: '원',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '월평균임금': {
+    orgId: '101',
+    tableId: 'DT_1YL15006',
+    tableName: '월평균 임금 및 임금상승률(시도)',
+    description: '상용근로자 월평균 임금',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '원',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '월급': {
+    orgId: '101',
+    tableId: 'DT_1YL15006',
+    tableName: '월평균 임금 및 임금상승률(시도)',
+    description: '상용근로자 월평균 임금',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '원',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '평균임금': {
+    orgId: '101',
+    tableId: 'DT_1YL15006',
+    tableName: '월평균 임금 및 임금상승률(시도)',
+    description: '상용근로자 월평균 임금',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '원',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== GRDP (지역내총생산) =====
+  // INH_1C91: GRDP 시도별 (연간)
+  'GRDP': {
+    orgId: '101',
+    tableId: 'INH_1C91',
+    tableName: 'GRDP(시도)',
+    description: '지역내총생산(명목)',
+    objL1: '00',          // 전국
+    objL2: 'Z10',         // 지역내총생산(시장가격)
+    itemId: 'T1',         // 명목
+    unit: '백만원',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '지역내총생산': {
+    orgId: '101',
+    tableId: 'INH_1C91',
+    tableName: 'GRDP(시도)',
+    description: '지역내총생산(명목)',
+    objL1: '00',
+    objL2: 'Z10',
+    itemId: 'T1',
+    unit: '백만원',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
   },
 };
 
