@@ -17,7 +17,7 @@ import {
 export const quickStatsSchema = {
   name: 'quick_stats',
   description:
-    '자주 묻는 통계를 한 번에 조회합니다. "한국 실업률", "출산율", "인구" 같은 간단한 질문에 바로 답변합니다. 특정 연도 조회 시 year 파라미터를, 월별/분기별 조회 시 period 파라미터를 사용하세요.',
+    '【실제 수치 반환】 83개 키워드의 통계 수치를 즉시 조회합니다. 인구, 실업률, GDP, 출산율, 미세먼지, 교통사고, 의사수, 범죄율, 아파트가격 등. "~이 얼마야?", "~알려줘" 같은 수치 질문에 이 도구를 사용하세요. 17개 시도별 조회 지원. search_statistics는 통계표 목록만 검색하고, 이 도구는 실제 데이터 값을 반환합니다.',
   inputSchema: z.object({
     query: z
       .string()
