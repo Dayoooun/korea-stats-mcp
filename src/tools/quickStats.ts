@@ -130,11 +130,13 @@ export async function quickStats(input: QuickStatsInput): Promise<QuickStatsResu
     }
 
     // 3. 주기(period) 결정 및 검증
-    const requestedPeriod = input.period || 'Y';
     const supportedPeriods = param.supportedPeriods || ['Y'];
+    // 사용자가 주기를 지정하지 않으면 키워드의 첫 번째 지원 주기 사용
+    const defaultPeriod = supportedPeriods[0];
+    const requestedPeriod = input.period || defaultPeriod;
 
     if (!supportedPeriods.includes(requestedPeriod)) {
-      const periodNames = { 'Y': '연간', 'Q': '분기', 'M': '월별' };
+      const periodNames = { 'Y': '연간', 'Q': '분기', 'M': '월별' } as const;
       const supportedNames = supportedPeriods.map(p => periodNames[p]).join(', ');
       return {
         success: false,

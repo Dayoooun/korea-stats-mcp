@@ -1,6 +1,6 @@
 {
   "name": "korea-stats-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "한국 통계청 KOSIS OpenAPI 기반 MCP 서버 - 자연어로 통계 데이터 조회",
   "main": "dist/index.js",
   "type": "module",

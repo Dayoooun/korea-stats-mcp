@@ -111,6 +111,50 @@ export const REGION_CODES_HOUSING: Record<string, string> = {
   '제주': 'c8',
 };
 
+/** PM2.5 미세먼지 지역 코드 (환경부 테이블) */
+export const REGION_CODES_PM25: Record<string, string> = {
+  '전국': '13102128219A.4100001',
+  '서울': '13102128219A.4200003',
+  '부산': '13102128219A.4200005',
+  '대구': '13102128219A.4200007',
+  '인천': '13102128219A.4200009',
+  '광주': '13102128219A.4200011',
+  '대전': '13102128219A.4200013',
+  '울산': '13102128219A.4200015',
+  '세종': '13102128219A.4200017',
+  '경기': '13102128219A.4200050',  // 도평균
+  '강원': '13102128219A.4200058',  // 도평균
+  '충북': '13102128219A.4200081',  // 도평균
+  '충남': '13102128219A.4200101',  // 도평균
+  '전북': '13102128219A.4200115',  // 도평균
+  '전남': '13102128219A.4200128',  // 도평균
+  '경북': '13102128219A.4200152',  // 도평균
+  '경남': '13102128219A.4200179',  // 도평균
+  '제주': '13102128219A.4200192',  // 도평균
+};
+
+/** PM10 미세먼지 지역 코드 (환경부 테이블) */
+export const REGION_CODES_PM10: Record<string, string> = {
+  '전국': '13102128237A.4100001',
+  '서울': '13102128237A.4200003',
+  '부산': '13102128237A.4200005',
+  '대구': '13102128237A.4200007',
+  '인천': '13102128237A.4200009',
+  '광주': '13102128237A.4200011',
+  '대전': '13102128237A.4200013',
+  '울산': '13102128237A.4200015',
+  '세종': '13102128237A.4200017',
+  '경기': '13102128237A.4200050',  // 도평균
+  '강원': '13102128237A.4200058',  // 도평균
+  '충북': '13102128237A.4200081',  // 도평균
+  '충남': '13102128237A.4200101',  // 도평균
+  '전북': '13102128237A.4200115',  // 도평균
+  '전남': '13102128237A.4200128',  // 도평균
+  '경북': '13102128237A.4200152',  // 도평균
+  '경남': '13102128237A.4200179',  // 도평균
+  '제주': '13102128237A.4200192',  // 도평균
+};
+
 /**
  * 검증된 Quick Stats 파라미터
  * - 2024년 기준 KOSIS API 메타데이터에서 추출
@@ -254,7 +298,7 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     objL1: '00',          // 전국
     itemId: 'T10',        // 남편 기준 혼인율
     unit: '‰',
-    regionCodes: REGION_CODES_POPULATION,
+    regionCodes: REGION_CODES_DEMOGRAPHIC,  // 인구동향 지역코드 사용 (POPULATION 코드가 아님)
   },
 
   // ===== 수명 관련 =====
@@ -742,6 +786,296 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     itemId: 'T1',
     unit: '백만원',
     regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== 전세 가격지수 =====
+  // DT_1YL13601E: 주택전세가격지수 (2003.11~, 월간)
+  '전세가격': {
+    orgId: '101',
+    tableId: 'DT_1YL13601E',
+    tableName: '주택전세가격지수(시도/시/군/구)',
+    description: '주택전세가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '전세가격지수': {
+    orgId: '101',
+    tableId: 'DT_1YL13601E',
+    tableName: '주택전세가격지수(시도/시/군/구)',
+    description: '주택전세가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '주택전세': {
+    orgId: '101',
+    tableId: 'DT_1YL13601E',
+    tableName: '주택전세가격지수(시도/시/군/구)',
+    description: '주택전세가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '전세': {
+    orgId: '101',
+    tableId: 'DT_1YL13601E',
+    tableName: '주택전세가격지수(시도/시/군/구)',
+    description: '주택전세가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  // DT_1YL20171E: 아파트전세가격지수 (2003.11~, 월간)
+  '아파트전세': {
+    orgId: '101',
+    tableId: 'DT_1YL20171E',
+    tableName: '아파트전세가격지수(시도/시/군/구)',
+    description: '아파트전세가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+  '아파트전세가격': {
+    orgId: '101',
+    tableId: 'DT_1YL20171E',
+    tableName: '아파트전세가격지수(시도/시/군/구)',
+    description: '아파트전세가격지수',
+    objL1: 'a0',
+    itemId: 'sales',
+    unit: '(2021.6=100)',
+    regionCodes: REGION_CODES_HOUSING,
+    supportedPeriods: ['M'],
+  },
+
+  // ===== 자동차 등록 =====
+  // DT_1YL20731: 1인당 자동차 등록대수 (시도별, 연간)
+  '자동차': {
+    orgId: '101',
+    tableId: 'DT_1YL20731',
+    tableName: '1인당 자동차 등록대수(시도/시/군/구)',
+    description: '자동차 등록대수',
+    objL1: '00',
+    itemId: 'T001',       // 자동차등록대수
+    unit: '대',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '자동차등록': {
+    orgId: '101',
+    tableId: 'DT_1YL20731',
+    tableName: '1인당 자동차 등록대수(시도/시/군/구)',
+    description: '자동차 등록대수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '대',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '자동차대수': {
+    orgId: '101',
+    tableId: 'DT_1YL20731',
+    tableName: '1인당 자동차 등록대수(시도/시/군/구)',
+    description: '자동차 등록대수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '대',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== 범죄 통계 =====
+  // DT_1YL3001: 인구 천명당 범죄발생건수 (시도별, 연간)
+  '범죄': {
+    orgId: '101',
+    tableId: 'DT_1YL3001',
+    tableName: '인구 천명당 범죄발생건수(시도)',
+    description: '인구 천명당 범죄발생건수',
+    objL1: '00',
+    itemId: 'T10',        // 인구 천명당 범죄발생건수
+    unit: '건',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '범죄율': {
+    orgId: '101',
+    tableId: 'DT_1YL3001',
+    tableName: '인구 천명당 범죄발생건수(시도)',
+    description: '인구 천명당 범죄발생건수',
+    objL1: '00',
+    itemId: 'T10',
+    unit: '건',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '범죄발생': {
+    orgId: '101',
+    tableId: 'DT_1YL3001',
+    tableName: '인구 천명당 범죄발생건수(시도)',
+    description: '범죄발생건수',
+    objL1: '00',
+    itemId: 'T001',       // 범죄발생건수 (총)
+    unit: '건',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== 관광 통계 =====
+  // DT_TRD_TGT_ENT_AGG_MONTH: 외래관광객 입국 (월간)
+  '관광객': {
+    orgId: '314',
+    tableId: 'DT_TRD_TGT_ENT_AGG_MONTH',
+    tableName: '외래객 입국-목적별/국적별',
+    description: '외래관광객수',
+    objL1: '13102314422A.1',  // 총계
+    itemId: '13103314422T01', // 계
+    unit: '명',
+    supportedPeriods: ['M'],
+  },
+  '외래관광객': {
+    orgId: '314',
+    tableId: 'DT_TRD_TGT_ENT_AGG_MONTH',
+    tableName: '외래객 입국-목적별/국적별',
+    description: '외래관광객수',
+    objL1: '13102314422A.1',
+    itemId: '13103314422T01',
+    unit: '명',
+    supportedPeriods: ['M'],
+  },
+  '입국자': {
+    orgId: '314',
+    tableId: 'DT_TRD_TGT_ENT_AGG_MONTH',
+    tableName: '외래객 입국-목적별/국적별',
+    description: '외래관광객수',
+    objL1: '13102314422A.1',
+    itemId: '13103314422T01',
+    unit: '명',
+    supportedPeriods: ['M'],
+  },
+
+  // ===== 교통사고 =====
+  '교통사고': {
+    orgId: '101',
+    tableId: 'DT_1YL21051',
+    tableName: '자동차 천대당 교통사고발생건수(시도/시/군/구)',
+    description: '교통사고 발생건수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '건',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '교통사고발생': {
+    orgId: '101',
+    tableId: 'DT_1YL21051',
+    tableName: '자동차 천대당 교통사고발생건수(시도/시/군/구)',
+    description: '교통사고 발생건수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '건',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '사고건수': {
+    orgId: '101',
+    tableId: 'DT_1YL21051',
+    tableName: '자동차 천대당 교통사고발생건수(시도/시/군/구)',
+    description: '교통사고 발생건수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '건',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== 의료 (의사수) =====
+  '의사': {
+    orgId: '101',
+    tableId: 'DT_1YL20981',
+    tableName: '인구 천명당 의료기관 종사 의사수(시도/시/군/구)',
+    description: '의료기관 종사 의사수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '명',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '의사수': {
+    orgId: '101',
+    tableId: 'DT_1YL20981',
+    tableName: '인구 천명당 의료기관 종사 의사수(시도/시/군/구)',
+    description: '의료기관 종사 의사수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '명',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '의료인력': {
+    orgId: '101',
+    tableId: 'DT_1YL20981',
+    tableName: '인구 천명당 의료기관 종사 의사수(시도/시/군/구)',
+    description: '의료기관 종사 의사수',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '명',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== 대기환경 (미세먼지) =====
+  '미세먼지': {
+    orgId: '106',
+    tableId: 'DT_106N_03_0200145',
+    tableName: '미세먼지(PM2.5) 월별 도시별 대기오염도',
+    description: '초미세먼지(PM2.5) 농도',
+    objL1: '13102128219A.4100001',  // 전국(총계)
+    itemId: '13103128219T.1100001', // 월평균
+    unit: 'μg/m³',
+    regionCodes: REGION_CODES_PM25,
+    supportedPeriods: ['M'],
+  },
+  'PM2.5': {
+    orgId: '106',
+    tableId: 'DT_106N_03_0200145',
+    tableName: '미세먼지(PM2.5) 월별 도시별 대기오염도',
+    description: '초미세먼지(PM2.5) 농도',
+    objL1: '13102128219A.4100001',
+    itemId: '13103128219T.1100001',
+    unit: 'μg/m³',
+    regionCodes: REGION_CODES_PM25,
+    supportedPeriods: ['M'],
+  },
+  '초미세먼지': {
+    orgId: '106',
+    tableId: 'DT_106N_03_0200145',
+    tableName: '미세먼지(PM2.5) 월별 도시별 대기오염도',
+    description: '초미세먼지(PM2.5) 농도',
+    objL1: '13102128219A.4100001',
+    itemId: '13103128219T.1100001',
+    unit: 'μg/m³',
+    regionCodes: REGION_CODES_PM25,
+    supportedPeriods: ['M'],
+  },
+  'PM10': {
+    orgId: '106',
+    tableId: 'DT_106N_03_0200045',
+    tableName: '미세먼지(PM10) 월별 도시별 대기오염도',
+    description: '미세먼지(PM10) 농도',
+    objL1: '13102128237A.4100001',  // 전국(총계)
+    itemId: '13103128237T.1100001', // 월평균
+    unit: 'μg/m³',
+    regionCodes: REGION_CODES_PM10,
+    supportedPeriods: ['M'],
+  },
+  '대기오염': {
+    orgId: '106',
+    tableId: 'DT_106N_03_0200145',
+    tableName: '미세먼지(PM2.5) 월별 도시별 대기오염도',
+    description: '초미세먼지(PM2.5) 농도',
+    objL1: '13102128219A.4100001',
+    itemId: '13103128219T.1100001',
+    unit: 'μg/m³',
+    regionCodes: REGION_CODES_PM25,
+    supportedPeriods: ['M'],
   },
 };
 
