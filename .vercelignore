@@ -1,0 +1,21 @@
+# pnpm store (causes path length issues)
+.pnpm-store
+
+# Development files
+node_modules
+*.log
+.env*
+
+# Test files
+test-*.js
+test-results.json
+playwright-report
+coverage
+
+# Documentation (not needed for deployment)
+docs/
+api-docs/
+
+# IDE
+.vscode
+.idea
