@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install --store-dir /tmp/.pnpm-store",
+  "buildCommand": "pnpm run build && rm -rf .pnpm-store",
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/mcp", "destination": "/api/mcp" },
