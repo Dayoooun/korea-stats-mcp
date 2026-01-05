@@ -76,29 +76,37 @@ export async function quickStats(input: QuickStatsInput): Promise<QuickStatsResu
     // 2. 지역 결정
     let regionName = '전국';
     let objL1 = param.objL1;
+    let requestedRegion: string | null = null;
 
     // 명시적 region 파라미터
-    if (input.region && param.regionCodes) {
-      const regionCode = getRegionCode(param, input.region);
-      if (regionCode !== param.objL1) {
-        objL1 = regionCode;
-        regionName = input.region;
-      }
+    if (input.region) {
+      requestedRegion = input.region;
     }
 
     // 쿼리에서 지역명 추출
-    if (!input.region) {
+    if (!requestedRegion) {
       for (const name of REGION_NAMES) {
         if (input.query.includes(name)) {
-          if (param.regionCodes) {
-            const regionCode = getRegionCode(param, name);
-            if (regionCode !== param.objL1) {
-              objL1 = regionCode;
-              regionName = name;
-            }
-          }
+          requestedRegion = name;
           break;
         }
+      }
+    }
+
+    // 지역 요청이 있는 경우 처리
+    if (requestedRegion) {
+      if (!param.regionCodes) {
+        // 지역별 데이터를 지원하지 않는 통계
+        return {
+          success: false,
+          answer: `"${input.query}"는 지역별 조회를 지원하지 않습니다. 전국 데이터만 제공됩니다.`,
+          note: `지역별 조회 가능: 인구, 출산율, 사망률, 혼인율, 이혼율 등`,
+        };
+      }
+      const regionCode = getRegionCode(param, requestedRegion);
+      if (regionCode !== param.objL1) {
+        objL1 = regionCode;
+        regionName = requestedRegion;
       }
     }
 
