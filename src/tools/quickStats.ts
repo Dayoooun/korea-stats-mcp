@@ -16,36 +16,43 @@ import {
 
 export const quickStatsSchema = {
   name: 'quick_stats',
-  description:
-    '【실제 수치 반환】 80개 이상 키워드의 통계 수치를 즉시 조회합니다. 인구, 실업률, GDP, 출산율, 미세먼지, 교통사고, 의사수, 범죄율, 아파트가격 등. "~이 얼마야?", "~알려줘" 같은 수치 질문에 이 도구를 사용하세요. 17개 시도별 조회 지원. search_statistics는 통계표 목록만 검색하고, 이 도구는 실제 데이터 값을 반환합니다.',
+  description: `【수치/데이터 질문 → 이 도구 사용】 한국 통계 수치를 즉시 반환합니다.
+
+■ 사용 시점: "~얼마야?", "~알려줘", "~몇 명이야?", "~수치", "~현황" 등 구체적 숫자가 필요한 질문
+■ 반환 형식: "2024년 서울의 실업률은 3.2%입니다" 같은 실제 데이터 값
+■ 지원 분야: 인구, 출산율, 실업률, GDP, 물가, 아파트가격, 미세먼지, 교통사고, 의사수, 범죄율 등 80개 이상
+■ 지역 조회: 서울, 부산, 대구 등 17개 시도별 조회 가능
+■ 기간 조회: 연간/월별/분기별 조회 가능
+
+⚠️ search_statistics와 차이: search_statistics는 "어떤 통계표가 있는지" 목록만 검색. 실제 수치가 필요하면 반드시 quick_stats 사용.`,
   inputSchema: z.object({
     query: z
       .string()
-      .describe('통계 키워드. 예: "실업률", "인구", "출산율", "GDP"'),
+      .describe('통계 키워드 (필수). 예: "실업률", "인구", "GDP", "미세먼지", "아파트가격"'),
     region: z
       .string()
       .optional()
-      .describe('지역명 (선택, 미지정시 전국). 예: "서울", "부산"'),
+      .describe('지역명. 예: "서울", "부산", "경기". 질문에 지역이 있으면 추출. "서울 인구" → region: "서울"'),
     year: z
       .number()
       .optional()
-      .describe('조회할 연도 (선택, 미지정시 최근 데이터). 질문에 연도가 포함되면 반드시 추출하여 전달. 예: "2010년 GDP" → year: 2010'),
+      .describe('조회 연도. 질문에 연도가 있으면 반드시 추출. "2020년 GDP" → year: 2020'),
     period: z
       .enum(['Y', 'Q', 'M'])
       .optional()
-      .describe('조회 주기 (선택, 기본값: Y). Y=연간, Q=분기, M=월별. 예: "10월 출생아수" → period: "M"'),
+      .describe('조회 주기. Y=연간(기본), Q=분기, M=월별. "10월 출생아수" → period: "M"'),
     month: z
       .number()
       .min(1)
       .max(12)
       .optional()
-      .describe('조회할 월 (period가 M일 때 사용). 예: "10월 출생아수" → month: 10'),
+      .describe('월 (period="M"일 때). "10월 출생아수" → month: 10'),
     quarter: z
       .number()
       .min(1)
       .max(4)
       .optional()
-      .describe('조회할 분기 (period가 Q일 때 사용). 예: "3분기 실업률" → quarter: 3'),
+      .describe('분기 (period="Q"일 때). "3분기 실업률" → quarter: 3'),
   }),
 };
 
