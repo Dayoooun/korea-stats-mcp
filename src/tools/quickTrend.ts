@@ -15,12 +15,20 @@ import { analyzeTrend } from '../utils/dataFormatter.js';
 
 export const quickTrendSchema = {
   name: 'quick_trend',
-  description:
-    '자주 묻는 통계의 시계열 추세를 간편하게 분석합니다. "인구 10년 추세", "출산율 추이", "실업률 변화" 같은 간단한 질문에 바로 답변합니다.',
+  description: `【추세/변화/증감 질문 → 이 도구 사용】 시계열 추세를 분석합니다.
+
+■ 사용 시점: "~추세", "~변화", "~감소", "~증가", "~추이", "~경향" 등 시간에 따른 변화 질문
+■ 반환 형식: 10년간 데이터 + 증감률 + 최고/최저점 + 추세 요약
+
+⚠️ 핵심 키워드만 추출하세요:
+• "인구감소 추세" → keyword: "인구"
+• "출산율 감소 원인" → keyword: "출산율"
+• "실업률 변화" → keyword: "실업률"
+• "고령화 추세" → keyword: "고령인구" 또는 "노령화지수"`,
   inputSchema: z.object({
     keyword: z
       .string()
-      .describe('통계 키워드. 예: "인구", "출산율", "실업률", "GDP", "물가"'),
+      .describe('통계 키워드만 입력 (추세/감소/증가/변화 등 수식어 제외). 예: "인구", "출산율", "실업률", "GDP", "고령인구"'),
     region: z
       .string()
       .optional()
