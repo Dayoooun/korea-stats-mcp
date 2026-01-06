@@ -17,7 +17,7 @@ import {
 export const quickStatsSchema = {
   name: 'quick_stats',
   description:
-    '【실제 수치 반환】 83개 키워드의 통계 수치를 즉시 조회합니다. 인구, 실업률, GDP, 출산율, 미세먼지, 교통사고, 의사수, 범죄율, 아파트가격 등. "~이 얼마야?", "~알려줘" 같은 수치 질문에 이 도구를 사용하세요. 17개 시도별 조회 지원. search_statistics는 통계표 목록만 검색하고, 이 도구는 실제 데이터 값을 반환합니다.',
+    '【실제 수치 반환】 80개 이상 키워드의 통계 수치를 즉시 조회합니다. 인구, 실업률, GDP, 출산율, 미세먼지, 교통사고, 의사수, 범죄율, 아파트가격 등. "~이 얼마야?", "~알려줘" 같은 수치 질문에 이 도구를 사용하세요. 17개 시도별 조회 지원. search_statistics는 통계표 목록만 검색하고, 이 도구는 실제 데이터 값을 반환합니다.',
   inputSchema: z.object({
     query: z
       .string()
@@ -85,7 +85,7 @@ export async function quickStats(input: QuickStatsInput): Promise<QuickStatsResu
     if (!param) {
       // 매핑이 없으면 카테고리별 지원 키워드 안내
       const keywordGuide = `
-📊 지원 키워드 (83개):
+📊 지원 키워드 (카테고리별 대표 예시):
 • 인구/출산: 인구, 출산율, 출생아수, 사망률, 기대수명
 • 고용/노동: 실업률, 고용률, 취업자수, 임금
 • 경제: GDP, GRDP, 경제성장률, 물가
@@ -96,8 +96,8 @@ export async function quickStats(input: QuickStatsInput): Promise<QuickStatsResu
 • 환경: 미세먼지, PM2.5, PM10
 • 사회: 범죄율, 의사수, 외래관광객
 
-💡 지역별 조회: "서울 실업률", "부산 인구" 등 17개 시도 지원
-💡 월별 조회: "2024년 10월 출생아수" 등 일부 키워드 지원`.trim();
+💡 지역별: "서울 실업률", "부산 인구" (17개 시도)
+💡 월별: "2024년 10월 출생아수" (일부 키워드)`.trim();
 
       return {
         success: false,
