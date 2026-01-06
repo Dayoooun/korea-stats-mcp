@@ -1021,6 +1021,105 @@ export const QUICK_STATS_PARAMS: Record<string, QuickStatsParam> = {
     regionCodes: REGION_CODES_DEMOGRAPHIC,
   },
 
+  // ===== 초혼연령 관련 =====
+  // INH_1B83A09: 평균 초혼연령(시도/시/군/구) - 2019~2024, 시도별 지원
+  '초혼연령': {
+    orgId: '101',
+    tableId: 'INH_1B83A09',
+    tableName: '평균 초혼연령(시도/시/군/구)',
+    description: '남편 평균 초혼연령',
+    objL1: '00',          // 전국
+    itemId: 'T10',        // 남편
+    unit: '세',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '평균초혼연령': {
+    orgId: '101',
+    tableId: 'INH_1B83A09',
+    tableName: '평균 초혼연령(시도/시/군/구)',
+    description: '남편 평균 초혼연령',
+    objL1: '00',
+    itemId: 'T10',
+    unit: '세',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '남성초혼연령': {
+    orgId: '101',
+    tableId: 'INH_1B83A09',
+    tableName: '평균 초혼연령(시도/시/군/구)',
+    description: '남편 평균 초혼연령',
+    objL1: '00',
+    itemId: 'T10',
+    unit: '세',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '여성초혼연령': {
+    orgId: '101',
+    tableId: 'INH_1B83A09',
+    tableName: '평균 초혼연령(시도/시/군/구)',
+    description: '아내 평균 초혼연령',
+    objL1: '00',
+    itemId: 'T20',        // 아내
+    unit: '세',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== 노령화지수 관련 =====
+  // DT_1YL12501E: 노령화지수(시도) - 2000~2052, 시도별 지원
+  '노령화지수': {
+    orgId: '101',
+    tableId: 'DT_1YL12501E',
+    tableName: '노령화지수(시도)',
+    description: '노령화지수 (65세이상/15세미만*100)',
+    objL1: '00',          // 전국
+    itemId: 'T10',        // 노령화지수
+    unit: '',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '고령화지수': {
+    orgId: '101',
+    tableId: 'DT_1YL12501E',
+    tableName: '노령화지수(시도)',
+    description: '노령화지수 (65세이상/15세미만*100)',
+    objL1: '00',
+    itemId: 'T10',
+    unit: '',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
+  // ===== 고령인구 관련 =====
+  // DT_1YL20631: 고령인구비율(시도/시/군/구) - 2000~2025, 시도별 지원
+  '고령인구': {
+    orgId: '101',
+    tableId: 'DT_1YL20631',
+    tableName: '고령인구비율(시도/시/군/구)',
+    description: '65세 이상 고령인구',
+    objL1: '00',          // 전국
+    itemId: 'T001',       // 65세이상인구
+    unit: '명',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '노인인구': {
+    orgId: '101',
+    tableId: 'DT_1YL20631',
+    tableName: '고령인구비율(시도/시/군/구)',
+    description: '65세 이상 노인인구',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '명',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+  '65세이상인구': {
+    orgId: '101',
+    tableId: 'DT_1YL20631',
+    tableName: '고령인구비율(시도/시/군/구)',
+    description: '65세 이상 인구',
+    objL1: '00',
+    itemId: 'T001',
+    unit: '명',
+    regionCodes: REGION_CODES_DEMOGRAPHIC,
+  },
+
   // ===== 대기환경 (미세먼지) =====
   '미세먼지': {
     orgId: '106',
