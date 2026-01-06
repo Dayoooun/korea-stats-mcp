@@ -217,7 +217,8 @@ export async function quickTrend(input: QuickTrendInput): Promise<QuickTrendResu
     const summary = `${regionName}의 ${param.description} ${sortedData.length}년 추세: ${trendDescriptions[trend]}입니다. ` +
       `${sortedData[0].year}년 ${sortedData[0].formatted}${param.unit}에서 ` +
       `${sortedData[sortedData.length - 1].year}년 ${sortedData[sortedData.length - 1].formatted}${param.unit}로 ` +
-      `${parseFloat(totalChange) >= 0 ? '증가' : '감소'}했습니다 (${parseFloat(totalChange) >= 0 ? '+' : ''}${totalChange}%).`;
+      `${parseFloat(totalChange) >= 0 ? '증가' : '감소'}했습니다 (${parseFloat(totalChange) >= 0 ? '+' : ''}${totalChange}%).\n\n` +
+      `📊 출처: ${param.tableName} (KOSIS)`;
 
     return {
       success: true,

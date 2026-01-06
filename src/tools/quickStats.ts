@@ -242,7 +242,7 @@ export async function quickStats(input: QuickStatsInput): Promise<QuickStatsResu
     const unit = param.unit;
 
     // 5. 자연어 응답 생성
-    const answer = generateNaturalResponse({
+    const baseAnswer = generateNaturalResponse({
       keyword,
       regionName,
       value,
@@ -250,6 +250,9 @@ export async function quickStats(input: QuickStatsInput): Promise<QuickStatsResu
       period: periodFormatted,
       description: param.description,
     });
+
+    // 출처 추가
+    const answer = `${baseAnswer}\n\n📊 출처: ${param.tableName} (KOSIS)`;
 
     return {
       success: true,
