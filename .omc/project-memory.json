@@ -233,20 +233,20 @@
   "hotPaths": [
     {
       "path": "src\\api\\client.ts",
-      "accessCount": 2,
-      "lastAccessed": 1771342736206,
-      "type": "file"
-    },
-    {
-      "path": "api\\mcp.ts",
-      "accessCount": 2,
-      "lastAccessed": 1771342784854,
+      "accessCount": 3,
+      "lastAccessed": 1771342995900,
       "type": "file"
     },
     {
       "path": "vercel.json",
-      "accessCount": 2,
-      "lastAccessed": 1771342793302,
+      "accessCount": 3,
+      "lastAccessed": 1771342996725,
+      "type": "file"
+    },
+    {
+      "path": "api\\mcp.ts",
+      "accessCount": 3,
+      "lastAccessed": 1771342997565,
       "type": "file"
     },
     {
