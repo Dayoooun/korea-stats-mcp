@@ -168,29 +168,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  // GET → 헬스체크 (MCP 클라이언트가 서버 상태 확인용으로 사용)
-  if (req.method === 'GET') {
-    return res.status(200).json({
-      jsonrpc: '2.0',
-      result: { status: 'ok', name: 'korea-stats-mcp', version: '1.0.0' },
-      id: null,
-    });
-  }
-
-  // DELETE → 세션 종료 (stateless라 할 일 없음)
-  if (req.method === 'DELETE') {
-    return res.status(200).json({
-      jsonrpc: '2.0',
-      result: { status: 'session_closed' },
-      id: null,
-    });
-  }
-
-  // POST만 MCP 처리
+  // Stateless 모드: POST만 허용. GET(SSE)/DELETE(세션종료) 불필요
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
     return res.status(405).json({
       jsonrpc: '2.0',
-      error: { code: -32600, message: `Method ${req.method} not allowed. Use POST.` },
+      error: { code: -32600, message: 'Method not allowed. This is a stateless MCP server — use POST only.' },
       id: null,
     });
   }
