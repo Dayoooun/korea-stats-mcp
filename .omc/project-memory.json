@@ -1,0 +1,278 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1771342425790,
+  "projectRoot": "D:\\rlaek\\code\\mcp\\korea-stats-mcp",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": ">=20.0.0",
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "@playwright/test",
+        "version": "1.57.0",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "pnpm",
+    "runtime": "Node.js 20.0.0"
+  },
+  "build": {
+    "buildCommand": "pnpm build",
+    "testCommand": "pnpm test",
+    "lintCommand": "pnpm lint",
+    "devCommand": "pnpm dev",
+    "scripts": {
+      "build": "tsc",
+      "dev": "tsc --watch",
+      "start": "node dist/index.js",
+      "inspector": "npx @modelcontextprotocol/inspector dist/index.js",
+      "test": "playwright test",
+      "test:ui": "playwright test --ui",
+      "test:headed": "playwright test --headed",
+      "lint": "eslint src --ext .ts",
+      "format": "prettier --write src/**/*.ts"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": null,
+    "testPattern": "*.spec.ts",
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "src",
+      "tests"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "api": {
+      "path": "api",
+      "purpose": "API routes",
+      "fileCount": 1,
+      "lastAccessed": 1771342425521,
+      "keyFiles": [
+        "mcp.ts"
+      ]
+    },
+    "api-docs": {
+      "path": "api-docs",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1771342425523,
+      "keyFiles": [
+        "openapi-guide.txt",
+        "openApi_manual_v1.0.pdf"
+      ]
+    },
+    "data": {
+      "path": "data",
+      "purpose": "Data files",
+      "fileCount": 0,
+      "lastAccessed": 1771342425556,
+      "keyFiles": []
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 8,
+      "lastAccessed": 1771342425558,
+      "keyFiles": [
+        "index.d.ts",
+        "index.d.ts.map",
+        "index.js",
+        "index.js.map",
+        "server.d.ts"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 2,
+      "lastAccessed": 1771342425559,
+      "keyFiles": [
+        "USABILITY_IMPROVEMENT.md",
+        "USER_GUIDE.md"
+      ]
+    },
+    "playwright-report": {
+      "path": "playwright-report",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1771342425560,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 2,
+      "lastAccessed": 1771342425561,
+      "keyFiles": [
+        "index.ts",
+        "server.ts"
+      ]
+    },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1771342425562,
+      "keyFiles": []
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 5,
+      "lastAccessed": 1771342425563,
+      "keyFiles": [
+        "01-connection.spec.ts",
+        "02-tools.spec.ts",
+        "03-resources.spec.ts",
+        "fixtures.ts",
+        "globalSetup.ts"
+      ]
+    },
+    "dist\\api": {
+      "path": "dist\\api",
+      "purpose": "API routes",
+      "fileCount": 8,
+      "lastAccessed": 1771342425576,
+      "keyFiles": [
+        "client.d.ts",
+        "client.d.ts.map",
+        "client.js"
+      ]
+    },
+    "dist\\config": {
+      "path": "dist\\config",
+      "purpose": "Configuration files",
+      "fileCount": 4,
+      "lastAccessed": 1771342425578,
+      "keyFiles": [
+        "index.d.ts",
+        "index.d.ts.map",
+        "index.js"
+      ]
+    },
+    "dist\\data": {
+      "path": "dist\\data",
+      "purpose": "Data files",
+      "fileCount": 4,
+      "lastAccessed": 1771342425578,
+      "keyFiles": [
+        "quickStatsParams.d.ts",
+        "quickStatsParams.d.ts.map",
+        "quickStatsParams.js"
+      ]
+    },
+    "src\\api": {
+      "path": "src\\api",
+      "purpose": "API routes",
+      "fileCount": 2,
+      "lastAccessed": 1771342425580,
+      "keyFiles": [
+        "client.ts",
+        "types.ts"
+      ]
+    },
+    "src\\config": {
+      "path": "src\\config",
+      "purpose": "Configuration files",
+      "fileCount": 1,
+      "lastAccessed": 1771342425581,
+      "keyFiles": [
+        "index.ts"
+      ]
+    },
+    "src\\data": {
+      "path": "src\\data",
+      "purpose": "Data files",
+      "fileCount": 1,
+      "lastAccessed": 1771342425582,
+      "keyFiles": [
+        "quickStatsParams.ts"
+      ]
+    },
+    "src\\utils": {
+      "path": "src\\utils",
+      "purpose": "Utility functions",
+      "fileCount": 3,
+      "lastAccessed": 1771342425584,
+      "keyFiles": [
+        "dataFormatter.ts",
+        "errorHandler.ts",
+        "queryParser.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "api\\mcp.ts",
+      "accessCount": 1,
+      "lastAccessed": 1771342530123,
+      "type": "file"
+    },
+    {
+      "path": "vercel.json",
+      "accessCount": 1,
+      "lastAccessed": 1771342531199,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1771342531277,
+      "type": "file"
+    },
+    {
+      "path": "src\\tools\\quickStats.ts",
+      "accessCount": 1,
+      "lastAccessed": 1771342549314,
+      "type": "file"
+    },
+    {
+      "path": "src\\api\\client.ts",
+      "accessCount": 1,
+      "lastAccessed": 1771342550469,
+      "type": "file"
+    },
+    {
+      "path": "src\\cache\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1771342551298,
+      "type": "file"
+    },
+    {
+      "path": "src\\config\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1771342552282,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
