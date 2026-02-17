@@ -2,6 +2,7 @@
  * Vercel Serverless Function for Korea Stats MCP
  *
  * Kakao PlayMCP 등록용 원격 MCP 서버 엔드포인트
+ * 최적화: fetch 타임아웃, 빠른 에러 반환, GET 헬스체크 지원
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -38,7 +39,7 @@ import {
 } from '../dist/prompts/index.js';
 
 /**
- * MCP 서버 생성 (Vercel용)
+ * MCP 서버 생성 (매 요청마다 - SDK 제약)
  */
 function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -161,30 +162,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id');
+  res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // GET → 헬스체크 (MCP 클라이언트가 서버 상태 확인용으로 사용)
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      jsonrpc: '2.0',
+      result: { status: 'ok', name: 'korea-stats-mcp', version: '1.0.0' },
+      id: null,
+    });
+  }
+
+  // DELETE → 세션 종료 (stateless라 할 일 없음)
+  if (req.method === 'DELETE') {
+    return res.status(200).json({
+      jsonrpc: '2.0',
+      result: { status: 'session_closed' },
+      id: null,
+    });
+  }
+
+  // POST만 MCP 처리
+  if (req.method !== 'POST') {
+    return res.status(405).json({
+      jsonrpc: '2.0',
+      error: { code: -32600, message: `Method ${req.method} not allowed. Use POST.` },
+      id: null,
+    });
+  }
+
   try {
     const server = createMcpServer();
 
-    // Stateless 모드로 트랜스포트 생성
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined, // Stateless mode
+      sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
 
-    // 연결 종료 시 정리
     res.on('close', () => transport.close());
 
     await server.connect(transport);
     await transport.handleRequest(req as any, res as any, req.body);
   } catch (error) {
     console.error('MCP Error:', error);
+
+    // 이미 응답이 시작됐으면 중단
+    if (res.headersSent) return;
+
+    const message = error instanceof Error ? error.message : 'Internal server error';
     res.status(500).json({
       jsonrpc: '2.0',
-      error: { code: -32603, message: 'Internal server error' },
+      error: { code: -32603, message },
       id: null,
     });
   }

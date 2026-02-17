@@ -56,8 +56,14 @@ export class KosisClient {
     const url = new URL(this.baseUrl + endpoint);
     url.search = new URLSearchParams(cleanParams).toString();
 
+    // 8초 타임아웃 (Vercel maxDuration 15초 내에 여유 확보)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), {
+        signal: controller.signal,
+      });
 
       if (!response.ok) {
         throw new KosisApiError(
@@ -89,11 +95,19 @@ export class KosisClient {
       if (error instanceof KosisApiError) {
         throw error;
       }
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new KosisApiError(
+          'TIMEOUT',
+          'KOSIS API 응답 시간 초과 (8초). 잠시 후 다시 시도해주세요.'
+        );
+      }
       throw new KosisApiError(
         'NETWORK_ERROR',
         '네트워크 오류가 발생했습니다.',
         error as Error
       );
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

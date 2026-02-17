@@ -232,15 +232,21 @@
   },
   "hotPaths": [
     {
+      "path": "src\\api\\client.ts",
+      "accessCount": 2,
+      "lastAccessed": 1771342736206,
+      "type": "file"
+    },
+    {
       "path": "api\\mcp.ts",
-      "accessCount": 1,
-      "lastAccessed": 1771342530123,
+      "accessCount": 2,
+      "lastAccessed": 1771342784854,
       "type": "file"
     },
     {
       "path": "vercel.json",
-      "accessCount": 1,
-      "lastAccessed": 1771342531199,
+      "accessCount": 2,
+      "lastAccessed": 1771342793302,
       "type": "file"
     },
     {
@@ -256,12 +262,6 @@
       "type": "file"
     },
     {
-      "path": "src\\api\\client.ts",
-      "accessCount": 1,
-      "lastAccessed": 1771342550469,
-      "type": "file"
-    },
-    {
       "path": "src\\cache\\index.ts",
       "accessCount": 1,
       "lastAccessed": 1771342551298,
@@ -271,6 +271,18 @@
       "path": "src\\config\\index.ts",
       "accessCount": 1,
       "lastAccessed": 1771342552282,
+      "type": "file"
+    },
+    {
+      "path": "src\\tools\\quickTrend.ts",
+      "accessCount": 1,
+      "lastAccessed": 1771342692844,
+      "type": "file"
+    },
+    {
+      "path": "src\\data\\quickStatsParams.ts",
+      "accessCount": 1,
+      "lastAccessed": 1771342694150,
       "type": "file"
     }
   ],
