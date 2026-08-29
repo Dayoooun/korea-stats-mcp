@@ -1,5 +1,5 @@
 {
-  "name": "@dayoun/korea-stats-mcp",
+  "name": "@kimdayoun/korea-stats-mcp",
   "version": "1.2.0",
   "description": "한국 통계청 KOSIS OpenAPI 기반 MCP 서버 — 자연어로 국가통계를 조회한다. MCP server for Korean national statistics (KOSIS).",
   "main": "dist/index.js",
@@ -60,9 +60,9 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/node": "^20.11.0",
-    "@vercel/node": "^3.0.0",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
+    "@vercel/node": "^3.0.0",
     "eslint": "^8.56.0",
     "prettier": "^3.2.4",
     "typescript": "^5.3.3"

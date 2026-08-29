@@ -3,10 +3,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue)](https://modelcontextprotocol.io/)
 [![Deploy](https://img.shields.io/badge/Vercel-Deployed-black)](https://korea-stats-mcp-yxup.vercel.app/)
-[![npm](https://img.shields.io/npm/v/@dayoun/korea-stats-mcp)](https://www.npmjs.com/package/@dayoun/korea-stats-mcp)
+[![npm](https://img.shields.io/npm/v/@kimdayoun/korea-stats-mcp)](https://www.npmjs.com/package/@kimdayoun/korea-stats-mcp)
 
 > **이 저장소가 원본입니다.** 정본: https://github.com/Dayoooun/korea-stats-mcp
-> npm 배포본은 **`@dayoun/korea-stats-mcp`** 하나뿐입니다.
+> npm 배포본은 **`@kimdayoun/korea-stats-mcp`** 하나뿐입니다.
 > `kosis-mcp` 등 스코프 없는 동명 패키지는 이 프로젝트와 무관한 제3자 배포본입니다.
 
 > **자연어로 KOSIS 통계를 조회하는 MCP 서버**
@@ -19,7 +19,7 @@ Claude, Cursor, Windsurf 등 AI 도구에서 **자연어로 한국 통계 데이
 **📦 로컬 설치:**
 
 ```bash
-npx -y @dayoun/korea-stats-mcp
+npx -y @kimdayoun/korea-stats-mcp
 ```
 
 MCP 클라이언트 설정:
@@ -29,7 +29,7 @@ MCP 클라이언트 설정:
   "mcpServers": {
     "korea-stats": {
       "command": "npx",
-      "args": ["-y", "@dayoun/korea-stats-mcp"],
+      "args": ["-y", "@kimdayoun/korea-stats-mcp"],
       "env": { "KOSIS_API_KEY": "발급받은_키" }
     }
   }
