@@ -3,8 +3,7 @@
  * 통계청 KOSIS OpenAPI 기반 MCP 서버
  */
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // 도구 가져오기
 import {
@@ -20,25 +19,30 @@ import {
   analyzeTimeSeriesSchema,
   getRecommendedStats,
   getRecommendedStatsSchema,
-  // getTableInfo - 응답량이 너무 커서 Cursor 초기화 유발, 비활성화
-  // getTableInfoSchema,
+  getTableInfo,
+  getTableInfoSchema,
+  registerPublicTools,
   quickStats,
   quickStatsSchema,
   quickTrend,
   quickTrendSchema,
-} from './tools/index.js';
+} from "./tools/index.js";
 
 // 리소스 가져오기
-import { getCategoryTreeJson, getKeyIndicatorsJson } from './resources/index.js';
+import {
+  getCategoryTreeJson,
+  getKeyIndicatorsJson,
+} from "./resources/index.js";
 
 // 프롬프트 가져오기
 import {
   statisticsAssistantPromptSchema,
   generateStatisticsAssistantPrompt,
-} from './prompts/index.js';
+} from "./prompts/index.js";
 
 // 설정 가져오기
-import { config, validateConfig } from './config/index.js';
+import { validateConfig } from "./config/index.js";
+import { PACKAGE_VERSION } from "./version.js";
 
 /**
  * MCP 서버 생성 및 설정
@@ -48,10 +52,10 @@ export function createServer(): McpServer {
   validateConfig();
 
   const server = new McpServer({
-    name: 'korea-stats-mcp',
-    version: '1.0.0',
+    name: "korea-stats-mcp",
+    version: PACKAGE_VERSION,
     description:
-      '한국 통계청 KOSIS OpenAPI 기반 MCP 서버 - 자연어로 통계 데이터를 검색하고 분석합니다.',
+      "한국 통계청 KOSIS OpenAPI 기반 MCP 서버 - 자연어로 통계 데이터를 검색하고 분석합니다.",
   });
 
   // ===== 도구 등록 =====
@@ -62,16 +66,16 @@ export function createServer(): McpServer {
     searchStatisticsSchema.description,
     searchStatisticsSchema.inputSchema.shape,
     async (args) => {
-      const result = await searchStatistics(args as any);
+      const result = await searchStatistics(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
   // 2. 통계 목록 조회
@@ -80,16 +84,16 @@ export function createServer(): McpServer {
     getStatisticsListSchema.description,
     getStatisticsListSchema.inputSchema.shape,
     async (args) => {
-      const result = await getStatisticsList(args as any);
+      const result = await getStatisticsList(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
   // 3. 통계 데이터 조회
@@ -98,16 +102,16 @@ export function createServer(): McpServer {
     getStatisticsDataSchema.description,
     getStatisticsDataSchema.inputSchema.shape,
     async (args) => {
-      const result = await getStatisticsData(args as any);
+      const result = await getStatisticsData(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
   // 4. 통계 비교
@@ -116,16 +120,16 @@ export function createServer(): McpServer {
     compareStatisticsSchema.description,
     compareStatisticsSchema.inputSchema.shape,
     async (args) => {
-      const result = await compareStatistics(args as any);
+      const result = await compareStatistics(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
   // 5. 시계열 분석
@@ -134,16 +138,16 @@ export function createServer(): McpServer {
     analyzeTimeSeriesSchema.description,
     analyzeTimeSeriesSchema.inputSchema.shape,
     async (args) => {
-      const result = await analyzeTimeSeries(args as any);
+      const result = await analyzeTimeSeries(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
   // 6. 추천 통계
@@ -152,36 +156,32 @@ export function createServer(): McpServer {
     getRecommendedStatsSchema.description,
     getRecommendedStatsSchema.inputSchema.shape,
     async (args) => {
-      const result = await getRecommendedStats(args as any);
+      const result = await getRecommendedStats(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
-  // 7. 통계표 정보 조회 - 비활성화 (응답량 과다로 Cursor 초기화 유발)
-  // 대신 quick_stats가 정적 파라미터를 사용하여 동일 기능 제공
-  // server.tool(
-  //   getTableInfoSchema.name,
-  //   getTableInfoSchema.description,
-  //   getTableInfoSchema.inputSchema.shape,
-  //   async (args) => {
-  //     const result = await getTableInfo(args as any);
-  //     return {
-  //       content: [
-  //         {
-  //           type: 'text' as const,
-  //           text: JSON.stringify(result, null, 2),
-  //         },
-  //       ],
-  //     };
-  //   }
-  // );
+  registerPublicTools(server);
+  server.tool(
+    getTableInfoSchema.name,
+    getTableInfoSchema.description,
+    getTableInfoSchema.inputSchema.shape,
+    async (args) => {
+      const result = await getTableInfo(args);
+      return {
+        content: [
+          { type: "text" as const, text: JSON.stringify(result, null, 2) },
+        ],
+      };
+    },
+  );
 
   // 8. 빠른 통계 조회 (원스텝)
   server.tool(
@@ -189,16 +189,16 @@ export function createServer(): McpServer {
     quickStatsSchema.description,
     quickStatsSchema.inputSchema.shape,
     async (args) => {
-      const result = await quickStats(args as any);
+      const result = await quickStats(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
   // 9. 빠른 추세 분석 (시계열)
@@ -207,56 +207,56 @@ export function createServer(): McpServer {
     quickTrendSchema.description,
     quickTrendSchema.inputSchema.shape,
     async (args) => {
-      const result = await quickTrend(args as any);
+      const result = await quickTrend(args);
       return {
         content: [
           {
-            type: 'text' as const,
+            type: "text" as const,
             text: JSON.stringify(result, null, 2),
           },
         ],
       };
-    }
+    },
   );
 
   // ===== 리소스 등록 =====
 
   // 1. 통계 분류 체계
   server.resource(
-    'category-tree',
-    'kosis://categories/tree',
+    "category-tree",
+    "kosis://categories/tree",
     {
-      description: 'KOSIS 통계 분류 체계 - 주제별/기관별 분류 구조',
-      mimeType: 'application/json',
+      description: "KOSIS 통계 탐색을 위한 정적 분류 안내",
+      mimeType: "application/json",
     },
     async () => ({
       contents: [
         {
-          uri: 'kosis://categories/tree',
+          uri: "kosis://categories/tree",
           text: getCategoryTreeJson(),
-          mimeType: 'application/json',
+          mimeType: "application/json",
         },
       ],
-    })
+    }),
   );
 
   // 2. 주요 지표 목록
   server.resource(
-    'key-indicators',
-    'kosis://indicators/list',
+    "key-indicators",
+    "kosis://indicators/list",
     {
-      description: '자주 조회되는 주요 경제사회 지표 목록',
-      mimeType: 'application/json',
+      description: "자주 조회되는 주요 경제사회 지표 목록",
+      mimeType: "application/json",
     },
     async () => ({
       contents: [
         {
-          uri: 'kosis://indicators/list',
+          uri: "kosis://indicators/list",
           text: getKeyIndicatorsJson(),
-          mimeType: 'application/json',
+          mimeType: "application/json",
         },
       ],
-    })
+    }),
   );
 
   // ===== 프롬프트 등록 =====
@@ -273,7 +273,7 @@ export function createServer(): McpServer {
           content: m.content,
         })),
       };
-    }
+    },
   );
 
   return server;

@@ -5,10 +5,13 @@
 node_modules
 *.log
 .env*
+.mcp*
 
 # Test files
 test-*.js
 test-results.json
+e2e-test.js
+playwright.config.ts
 playwright-report
 coverage
 
@@ -19,3 +22,11 @@ api-docs/
 # IDE
 .vscode
 .idea
+
+# Private agent state and local verification artifacts
+.gjc/
+.omc/
+.cache/
+tests/
+test-results/
+*.tgz

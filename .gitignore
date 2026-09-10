@@ -6,8 +6,14 @@ dist/
 
 # Environment (API keys 등 민감정보)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+.mcp*
+
+# Local workflow state (keep project skills and rules versionable)
+.gjc/_session-*/
+.gjc/ultragoal/
+.gjc/state/
 
 # IDE
 .vscode/

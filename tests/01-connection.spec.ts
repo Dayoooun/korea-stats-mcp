@@ -1,83 +1,80 @@
-/**
- * MCP Inspector 연결 테스트
- * MCP Inspector v0.18.0+ UI에 맞춤
- */
+import { test, expect } from "./fixtures";
+import {
+  candidateConfig,
+  callToolJson,
+  runSanitizedLiveCase,
+  withReleaseClient,
+} from "./release-live-client";
+import { assertM06ReceiptFile } from "./release-external-evidence";
+import { RELEASE_ENV } from "./requiredCases";
 
-import { test, expect } from '@playwright/test';
-
-test.describe('MCP Inspector 연결 테스트', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+test.describe("MCP Inspector 2.5 connection", () => {
+  test("REQ-H02 actual Inspector and provider prerequisites @live @stdio @http @AC13", async ({
+    connectedPage: page,
+  }) => {
+    const status = page.getByTestId("connection-status");
+    test.setTimeout(180_000);
+    await expect(status).toHaveAttribute("data-status", "connected");
+    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("switch", { name: 'Connect or disconnect "node"' }),
+    ).toBeChecked();
+    await expect(
+      page.getByText("Connection Error", { exact: true }),
+    ).toHaveCount(0);
+    await runSanitizedLiveCase("REQ-H02", async () => {
+      const config = candidateConfig();
+      const phase = process.env[RELEASE_ENV.phase]?.trim();
+      if (phase === "R2" || phase === "R3") {
+        const receiptPath = process.env[RELEASE_ENV.mcpClientsReceipt]?.trim();
+        const candidate = process.env[RELEASE_ENV.candidate]?.trim();
+        if (!receiptPath || !candidate) {
+          throw new Error(
+            "Claude Code and Codex prerequisite evidence is missing",
+          );
+        }
+        assertM06ReceiptFile(receiptPath, {
+          phase,
+          candidate,
+          targetUrl: config.httpUrl.toString(),
+        });
+      }
+      for (const kind of ["stdio", "http"] as const) {
+        await withReleaseClient(kind, async ({ client }) => {
+          const catalogue = await callToolJson(client, "get_statistics_list", {
+            viewCode: "MT_ZTITLE",
+            parentId: "",
+          });
+          expect(catalogue.success, `${kind} real KOSIS prerequisite`).toBe(
+            true,
+          );
+          if (phase === "R3") {
+            const businesses = await callToolJson(client, "search_businesses", {
+              regionType: "ctprvnCd",
+              regionCode: "26",
+              page: 1,
+              pageSize: 20,
+            });
+            expect(
+              businesses.success,
+              `${kind} business access prerequisite`,
+            ).toBe(true);
+            expect(Number(businesses.returnedCount)).toBeGreaterThan(0);
+          }
+        });
+      }
+    });
   });
 
-  test('페이지 로드 확인', async ({ page }) => {
-    // MCP Inspector 타이틀 확인
-    await expect(page).toHaveTitle(/MCP|Inspector/i);
-
-    // 헤더에 버전 정보 확인
-    await expect(page.locator('h1')).toContainText(/MCP Inspector/i);
-  });
-
-  test('서버 연결 UI 요소 확인', async ({ page }) => {
-    // Transport Type combobox 확인 (v0.18.0에서 select -> combobox로 변경)
-    const transportCombobox = page.getByRole('combobox', { name: 'Transport Type' });
-    await expect(transportCombobox).toBeVisible();
-
-    // Command 입력 필드 확인
-    const commandInput = page.getByRole('textbox', { name: 'Command' });
-    await expect(commandInput).toBeVisible();
-
-    // Arguments 입력 필드 확인
-    const argsInput = page.getByRole('textbox', { name: 'Arguments' });
-    await expect(argsInput).toBeVisible();
-
-    // Connect 버튼 확인
-    const connectButton = page.getByRole('button', { name: 'Connect' });
-    await expect(connectButton).toBeVisible();
-  });
-
-  test('Configuration 섹션 확인', async ({ page }) => {
-    // Configuration 버튼 클릭
-    const configButton = page.getByRole('button', { name: 'Configuration' });
-    await configButton.click();
-
-    // Configuration 옵션들 확인
-    await expect(page.getByRole('spinbutton', { name: 'Request Timeout' })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Proxy Session Token' })).toBeVisible();
-  });
-
-  test('Environment Variables 섹션 확인', async ({ page }) => {
-    // Environment Variables 버튼이 존재하고 클릭 가능한지 확인
-    const envButton = page.getByRole('button', { name: 'Environment Variables' });
-    await expect(envButton).toBeVisible();
-    await expect(envButton).toBeEnabled();
-
-    // 버튼 클릭
-    await envButton.click();
-
-    // 클릭 후 UI 변화 확인 (토글 또는 확장)
-    await page.waitForTimeout(500);
-  });
-
-  test('서버 연결 시도', async ({ page }) => {
-    // Connect 버튼 클릭
-    const connectButton = page.getByRole('button', { name: 'Connect' });
-    await connectButton.click();
-
-    // 연결 시도 결과 확인 (성공 또는 오류 메시지)
-    // 토큰이 없으면 에러가 발생할 수 있음
-    const status = page.locator('[class*="status"], [data-testid*="status"]').first();
-
-    // 연결 상태 변화 확인 (성공, 실패, 또는 에러 메시지)
-    await expect(async () => {
-      const text = await page.locator('body').innerText();
-      const hasStatusChange =
-        text.includes('Connected') ||
-        text.includes('Connection Error') ||
-        text.includes('Tools') ||
-        text.includes('Disconnected');
-      expect(hasStatusChange).toBeTruthy();
-    }).toPass({ timeout: 10000 });
+  test("disconnects the connected stdio server explicitly", async ({
+    connectedPage: page,
+  }) => {
+    const connection = page.getByRole("switch", {
+      name: 'Connect or disconnect "node"',
+    });
+    await connection.press("Space");
+    await expect(connection).not.toBeChecked();
+    await expect(page.getByText("Disconnected", { exact: true })).toBeVisible();
+    await expect(page.getByText("Connected", { exact: true })).toHaveCount(0);
   });
 });

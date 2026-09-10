@@ -3,234 +3,759 @@
  * 여러 지역 또는 시점의 통계를 비교
  */
 
-import { z } from 'zod';
-import { getKosisClient } from '../api/client.js';
-import { getCacheManager } from '../cache/index.js';
-import { calculateChangeRate } from '../utils/dataFormatter.js';
+import { z } from "zod";
+import { parseStatisticsPeriod } from "./getStatisticsData.js";
+import {
+  ANALYSIS_MAX_ERROR_ROWS,
+  collectStatisticsPages,
+  createStatisticsCollectionBudget,
+} from "./statisticsRetrieval.js";
+import type { SimplifiedDataItem, StatisticsDataItem } from "../api/types.js";
+import {
+  comparePeriods,
+  formatPeriod,
+  normalizeStatisticsPeriodType,
+} from "../utils/dataFormatter.js";
+import { buildStatisticsProvenance } from "../utils/statisticsProvenance.js";
+import { parseObservedNumber } from "../utils/regionResolver.js";
+import { handleToolError } from "../utils/errorHandler.js";
 
 export const compareStatisticsSchema = {
-  name: 'compare_statistics',
-  description:
-    '여러 지역, 시점, 또는 항목의 통계 데이터를 비교합니다.',
+  name: "compare_statistics",
+  description: "여러 지역, 시점, 또는 항목의 통계 데이터를 비교합니다.",
   inputSchema: z.object({
-    orgId: z.string().describe('기관 ID'),
-    tableId: z.string().describe('통계표 ID'),
+    orgId: z.string().describe("기관 ID"),
+    tableId: z.string().describe("통계표 ID"),
     compareType: z
-      .enum(['period', 'item'])
-      .describe('비교 유형: period(시점 비교), item(항목 비교)'),
-    periodType: z.enum(['Y', 'M', 'Q']).describe('주기: Y(년), M(월), Q(분기)'),
+      .enum(["period", "item"])
+      .describe("비교 유형: period(시점 비교), item(항목 비교)"),
+    periodType: z.enum(["Y", "M", "Q"]).describe("주기: Y(년), M(월), Q(분기)"),
     periods: z
       .array(z.string())
       .optional()
       .describe('비교할 시점들 (예: ["2022", "2023", "2024"])'),
-    objL1: z.string().optional().describe('분류1 코드'),
-    objL2: z.string().optional().describe('분류2 코드 (일부 테이블에서 필요)'),
-    itemId: z.string().optional().describe('항목 ID'),
+    objL1: z.string().optional().describe("분류1 코드"),
+    objL2: z.string().optional().describe("분류2 코드"),
+    objL3: z.string().optional().describe("분류3 코드"),
+    objL4: z.string().optional().describe("분류4 코드"),
+    objL5: z.string().optional().describe("분류5 코드"),
+    objL6: z.string().optional().describe("분류6 코드"),
+    objL7: z.string().optional().describe("분류7 코드"),
+    objL8: z.string().optional().describe("분류8 코드"),
+    itemId: z.string().optional().describe("항목 ID"),
   }),
 };
 
-export type CompareStatisticsInput = z.infer<typeof compareStatisticsSchema.inputSchema>;
+export type CompareStatisticsInput = z.infer<
+  typeof compareStatisticsSchema.inputSchema
+>;
+type ValidationLevel = "verified" | "partial" | "unverified";
+type RawRow = StatisticsDataItem;
+
+interface ComparisonChange {
+  rate: number | null;
+  direction: "up" | "down" | "stable";
+  formatted: string;
+  absolute: number;
+  explanation?: string;
+}
 
 interface ComparisonItem {
   name: string;
-  region?: string;        // 지역명 (C1_NM)
-  itemName?: string;      // 항목명 (ITM_NM)
-  period?: string;        // 시점 (PRD_DE)
-  value: number;
+  /** Provider classification label; it is not assumed to be a geographic region. */
+  classification?: Array<{ axis: number; code?: string; name?: string }>;
+  region?: string;
+  itemName?: string;
+  itemId?: string;
+  period?: string;
+  value: number | null;
+  rawValue?: string;
   formattedValue: string;
-  unit?: string;          // 단위 (UNIT_NM)
+  unit?: string;
   rank?: number;
-  change?: {
-    rate: number;
-    direction: 'up' | 'down' | 'stable';
-    formatted: string;
+  change?: ComparisonChange;
+  raw?: RawRow;
+}
+
+type Retrieval = {
+  rows: SimplifiedDataItem[];
+  validationLevel: ValidationLevel;
+  errorCode?: string;
+  message?: string;
+};
+
+type RowValidation = {
+  ok: boolean;
+  message?: string;
+  errorCode?: string;
+  rows: SimplifiedDataItem[];
+};
+
+function text(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const result = String(value).trim();
+  return result || undefined;
+}
+
+function isOpaqueSelector(value: string | undefined): boolean {
+  if (!value) return false;
+  const normalized = value.trim();
+  return (
+    normalized === "*" ||
+    normalized.toUpperCase() === "ALL" ||
+    normalized.toUpperCase() === "SUM" ||
+    normalized.includes(",")
+  );
+}
+function isUnknownUnit(value: string | undefined): boolean {
+  return (
+    !value ||
+    /^(?:unknown|n\/?a|na|null|미상|단위\s*미상|알\s*수\s*없음|-|…|\.\.\.)$/iu.test(
+      value,
+    )
+  );
+}
+
+function selectorValues(
+  input: CompareStatisticsInput,
+): Record<string, string | undefined> {
+  return Object.fromEntries(
+    Array.from({ length: 8 }, (_, index) => [
+      `objL${index + 1}`,
+      input[`objL${index + 1}` as keyof CompareStatisticsInput] as
+        string | undefined,
+    ]),
+  );
+}
+
+async function retrieveRows(input: CompareStatisticsInput): Promise<Retrieval> {
+  const dimensions = selectorValues(input);
+  const objL1 = dimensions.objL1 ?? "ALL";
+  const itemId = input.itemId ?? "ALL";
+  const requestedPeriods =
+    input.compareType === "period" ? input.periods : undefined;
+  const rows: SimplifiedDataItem[] = [];
+  let validationLevel: ValidationLevel = "verified";
+
+  const budget = createStatisticsCollectionBudget();
+  const queryCount = requestedPeriods?.length || 1;
+  for (let index = 0; index < queryCount; index += 1) {
+    const query = requestedPeriods?.length
+      ? {
+          startPeriod: requestedPeriods[index],
+          endPeriod: requestedPeriods[index],
+        }
+      : { recentCount: input.compareType === "period" ? 2 : 1 };
+    const result = await collectStatisticsPages(
+      {
+        orgId: input.orgId,
+        tableId: input.tableId,
+        ...dimensions,
+        objL1,
+        itemId,
+        periodType: input.periodType,
+        ...query,
+      },
+      budget,
+    );
+    if (result.validationLevel === "unverified") validationLevel = "unverified";
+    else if (
+      result.validationLevel === "partial" &&
+      validationLevel !== "unverified"
+    )
+      validationLevel = "partial";
+    if (!result.success) {
+      return {
+        rows: [...rows, ...result.rows].slice(0, ANALYSIS_MAX_ERROR_ROWS),
+        validationLevel: "unverified",
+        errorCode: result.errorCode ?? "response_incomplete",
+        message: result.message ?? "검증된 통계 응답을 받지 못했습니다.",
+      };
+    }
+    rows.push(...result.rows);
+  }
+
+  return { rows, validationLevel };
+}
+
+function classificationKey(raw: RawRow): string {
+  return Array.from({ length: 8 }, (_, index) => {
+    const axis = index + 1;
+    return `${text(raw[`C${axis}` as keyof RawRow]) ?? ""}\u0000${text(raw[`C${axis}_NM` as keyof RawRow]) ?? ""}`;
+  }).join("\u0001");
+}
+
+function classification(
+  raw: RawRow,
+): Array<{ axis: number; code?: string; name?: string }> {
+  return Array.from({ length: 8 }, (_, index) => {
+    const axis = index + 1;
+    const code = text(raw[`C${axis}` as keyof RawRow]);
+    const name = text(raw[`C${axis}_NM` as keyof RawRow]);
+    return { axis, code, name };
+  }).filter((entry) => entry.code !== undefined || entry.name !== undefined);
+}
+
+function periodStep(periodType: "Y" | "M" | "Q"): number {
+  return periodType === "Y" ? 1 : periodType === "M" ? 1 : 1;
+}
+
+function validateRows(
+  input: CompareStatisticsInput,
+  rows: SimplifiedDataItem[],
+  requestedPeriods: string[] | undefined,
+): RowValidation {
+  if (rows.length === 0) {
+    return { ok: false, message: "비교할 검증된 관측값이 없습니다.", rows };
+  }
+
+  const categories = new Set<string>();
+  const itemIds = new Set<string>();
+  const periods = new Set<string>();
+  const units = new Set<string>();
+  const axisValues = Array.from({ length: 8 }, () => new Set<string>());
+  const axisMissing = Array.from({ length: 8 }, () => false);
+
+  for (const row of rows) {
+    const raw = row.raw;
+    if (!raw)
+      return {
+        ok: false,
+        message: "provider raw observation evidence is missing.",
+        rows,
+      };
+    const orgId = text(raw.ORG_ID);
+    const tableId = text(raw.TBL_ID);
+    if (!orgId || !tableId) {
+      return {
+        ok: false,
+        message: "응답 통계표 식별자 증거가 누락되었습니다.",
+        errorCode: "response_incomplete",
+        rows,
+      };
+    }
+    if (orgId !== input.orgId || tableId !== input.tableId) {
+      return {
+        ok: false,
+        message: "응답 통계표 식별자가 요청과 다릅니다.",
+        errorCode: "response_mismatch",
+        rows,
+      };
+    }
+    const periodType = normalizeStatisticsPeriodType(text(raw.PRD_SE));
+    if (!periodType) {
+      return {
+        ok: false,
+        message: "응답 주기 증거가 누락되었습니다.",
+        errorCode: "response_incomplete",
+        rows,
+      };
+    }
+    if (periodType !== input.periodType) {
+      return {
+        ok: false,
+        message: "응답 주기가 요청과 다릅니다.",
+        errorCode: "response_mismatch",
+        rows,
+      };
+    }
+    const period = text(raw.PRD_DE);
+    if (!period || parseStatisticsPeriod(period, input.periodType) === null) {
+      return {
+        ok: false,
+        message: "응답 시점을 해석할 수 없습니다.",
+        errorCode: "response_incomplete",
+        rows,
+      };
+    }
+    const item = text(raw.ITM_ID);
+    if (!item)
+      return { ok: false, message: "응답 항목 식별자가 없습니다.", rows };
+    const unit = text(raw.UNIT_NM);
+    if (!unit)
+      return {
+        ok: false,
+        message: "응답 단위가 없어 수치를 비교할 수 없습니다.",
+        rows,
+      };
+    if (isUnknownUnit(unit))
+      return {
+        ok: false,
+        message: "응답 단위 증거가 누락되었거나 미상입니다.",
+        errorCode: "response_incomplete",
+        rows,
+      };
+
+    for (let index = 0; index < 8; index += 1) {
+      const axis = index + 1;
+      const value = text(raw[`C${axis}` as keyof RawRow]);
+      const requested = input[`objL${axis}` as keyof CompareStatisticsInput] as
+        string | undefined;
+      if (value) axisValues[index].add(value);
+      else axisMissing[index] = true;
+      if (requested && !isOpaqueSelector(requested) && !value) {
+        return {
+          ok: false,
+          message: `C${axis} 응답 분류값 증거가 누락되었습니다.`,
+          errorCode: "response_incomplete",
+          rows,
+        };
+      }
+      if (requested && !isOpaqueSelector(requested) && value !== requested) {
+        return {
+          ok: false,
+          message: `C${axis} 응답 분류값이 요청과 다릅니다.`,
+          errorCode: "response_mismatch",
+          rows,
+        };
+      }
+    }
+
+    if (
+      input.itemId &&
+      !isOpaqueSelector(input.itemId) &&
+      item !== input.itemId
+    ) {
+      return {
+        ok: false,
+        message: "응답 항목이 요청 항목과 다릅니다.",
+        errorCode: "response_mismatch",
+        rows,
+      };
+    }
+    if (parseObservedNumber(raw.DT) === null) {
+      return {
+        ok: false,
+        message: `${period} 관측값이 결측 또는 숫자가 아닙니다.`,
+        errorCode: "response_incomplete",
+        rows,
+      };
+    }
+
+    categories.add(classificationKey(raw));
+    itemIds.add(item);
+    periods.add(period);
+    units.add(unit);
+  }
+
+  if (units.size !== 1)
+    return { ok: false, message: "여러 단위가 한 비교에 섞였습니다.", rows };
+  if (categories.size !== 1)
+    return { ok: false, message: "여러 분류가 한 비교에 섞였습니다.", rows };
+  for (let index = 0; index < 8; index += 1) {
+    if (
+      axisValues[index].size > 1 ||
+      (axisValues[index].size > 0 && axisMissing[index])
+    ) {
+      return {
+        ok: false,
+        message: `C${index + 1} 분류값이 혼합되었거나 일부 누락되었습니다.`,
+        rows,
+      };
+    }
+  }
+
+  if (input.compareType === "period" && itemIds.size !== 1) {
+    return { ok: false, message: "시점 비교에 여러 항목이 섞였습니다.", rows };
+  }
+  if (input.compareType === "item" && periods.size !== 1) {
+    return { ok: false, message: "항목 비교에 여러 시점이 섞였습니다.", rows };
+  }
+  if (input.compareType === "item" && itemIds.size < 2) {
+    return {
+      ok: false,
+      message: "항목 비교에는 서로 다른 항목이 두 개 이상 필요합니다.",
+      errorCode: "response_incomplete",
+      rows,
+    };
+  }
+
+  const expected = requestedPeriods
+    ? [...new Set(requestedPeriods)]
+    : undefined;
+  if (expected && expected.length < 2) {
+    return {
+      ok: false,
+      message: "시점 비교에는 서로 다른 시점이 두 개 이상 필요합니다.",
+      rows,
+    };
+  }
+  if (expected) {
+    if (
+      expected.some(
+        (period) => parseStatisticsPeriod(period, input.periodType) === null,
+      )
+    ) {
+      return {
+        ok: false,
+        message: "요청 시점 형식이 주기와 맞지 않습니다.",
+        rows,
+      };
+    }
+    if (
+      periods.size !== expected.length ||
+      expected.some((period) => !periods.has(period))
+    ) {
+      return {
+        ok: false,
+        message: "응답에 요청한 시점이 모두 포함되지 않았습니다.",
+        rows,
+      };
+    }
+  }
+  if (
+    input.compareType === "period" &&
+    requestedPeriods === undefined &&
+    periods.size < 2
+  ) {
+    return {
+      ok: false,
+      message:
+        "암시적 시점 비교에는 서로 다른 검증된 시점이 두 개 이상 필요합니다.",
+      errorCode: "response_incomplete",
+      rows,
+    };
+  }
+
+  const orderedPeriods = [...periods].sort((left, right) =>
+    comparePeriods(left, right),
+  );
+  const indexes = orderedPeriods.map(
+    (period) => parseStatisticsPeriod(period, input.periodType) as number,
+  );
+  for (let index = 1; index < indexes.length; index += 1) {
+    if (
+      !expected &&
+      indexes[index] - indexes[index - 1] !== periodStep(input.periodType)
+    ) {
+      return {
+        ok: false,
+        message: "시점이 이어지지 않아 누락 기간을 0으로 보정하지 않았습니다.",
+        rows,
+      };
+    }
+  }
+
+  const duplicateKeys = new Set<string>();
+  for (const row of rows) {
+    const raw = row.raw;
+    const period = text(raw.PRD_DE) as string;
+    const item = text(raw.ITM_ID) as string;
+    const key = `${period}\u0000${input.compareType === "item" ? item : ""}`;
+    if (duplicateKeys.has(key)) {
+      return {
+        ok: false,
+        message: `중복 관측(${period})이 있어 비교할 한 시리즈를 확정할 수 없습니다.`,
+        rows,
+      };
+    }
+    duplicateKeys.add(key);
+  }
+  return { ok: true, rows };
+}
+
+function formatAbsolute(value: number): string {
+  const formatted = value.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+  return value > 0 ? `+${formatted}` : formatted;
+}
+
+function changeFor(current: number, previous: number): ComparisonChange {
+  const absolute = current - previous;
+  if (previous === 0) {
+    const direction = absolute > 0 ? "up" : absolute < 0 ? "down" : "stable";
+    return {
+      rate: null,
+      direction,
+      absolute,
+      formatted: `${formatAbsolute(absolute)} (기준값 0으로 비율 미정)`,
+      explanation: "이전 관측값이 0이어서 백분율 변화율은 정의되지 않습니다.",
+    };
+  }
+  const rate = (absolute / Math.abs(previous)) * 100;
+  const direction = rate > 0.1 ? "up" : rate < -0.1 ? "down" : "stable";
+  return {
+    rate,
+    direction,
+    absolute,
+    formatted: `${rate > 0 ? "+" : ""}${rate.toFixed(1)}%`,
+  };
+}
+
+function providerRegion(raw: RawRow): string | undefined {
+  const axisName = text(raw.C1_OBJ_NM);
+  if (!axisName || !/(?:지역|시도|시군구|region)/iu.test(axisName))
+    return undefined;
+  return text(raw.C1_NM);
+}
+function itemFromRow(
+  row: SimplifiedDataItem,
+  compareType: CompareStatisticsInput["compareType"],
+): ComparisonItem {
+  const raw = row.raw;
+  const value = parseObservedNumber(raw.DT);
+  const period = text(raw.PRD_DE);
+  const itemName = text(raw.ITM_NM);
+  const unit = text(raw.UNIT_NM);
+  const itemId = text(raw.ITM_ID);
+  const labels = classification(raw);
+  const name =
+    compareType === "period"
+      ? period
+        ? formatPeriod(period, normalizeStatisticsPeriodType(raw.PRD_SE))
+        : "N/A"
+      : [...labels.map((entry) => entry.name ?? entry.code), itemName ?? itemId]
+          .filter(Boolean)
+          .join(" - ") || "N/A";
+  const formattedValue =
+    raw.DT === undefined || raw.DT === null ? "" : String(raw.DT);
+  return {
+    name,
+    classification: labels,
+    region: providerRegion(raw),
+    itemName,
+    itemId,
+    period,
+    value,
+    rawValue:
+      raw.DT === undefined || raw.DT === null ? undefined : String(raw.DT),
+    formattedValue,
+    unit,
+    raw,
+  };
+}
+
+function failedResult(
+  input: CompareStatisticsInput,
+  message: string,
+  rows: SimplifiedDataItem[],
+  level: ValidationLevel = "unverified",
+  errorCode: string = "response_incomplete",
+  queriedAt: string = new Date().toISOString(),
+) {
+  const readAt = new Date().toISOString();
+  const provenanceInput =
+    input.periods && input.periods.length > 0
+      ? input
+      : { ...input, recentCount: input.compareType === "period" ? 2 : 1 };
+  return {
+    success: false,
+    compareType: input.compareType,
+    validationLevel: level,
+    errorCode,
+    provenance: buildStatisticsProvenance(provenanceInput, rows, {
+      queryPeriods: input.compareType === "period" ? input.periods : undefined,
+      queriedAt,
+      readAt,
+      calculated: false,
+      calculationPolicies: [
+        "No comparison is applied unless provider observations pass validation.",
+        "Missing observations are never converted to zero.",
+      ],
+    }),
+    items: rows.map((row) => itemFromRow(row, input.compareType)),
+    summary: "검증되지 않은 응답은 비교하지 않았습니다.",
+    insights: [
+      message,
+      rows.length > 0
+        ? "반환 가능한 원본 provider 관측값은 items[].raw에 보존되어 있습니다."
+        : "검증 실패로 반환할 수 있는 원본 관측값이 없습니다.",
+    ],
   };
 }
 
 export async function compareStatistics(
-  input: CompareStatisticsInput
+  input: CompareStatisticsInput,
 ): Promise<{
   success: boolean;
   compareType: string;
+  validationLevel?: ValidationLevel;
+  errorCode?: string;
   items: ComparisonItem[];
   summary: string;
   insights: string[];
+  provenance?: ReturnType<typeof buildStatisticsProvenance>;
 }> {
-  const client = getKosisClient();
-  const cache = getCacheManager();
-
+  const queriedAt = new Date().toISOString();
+  const provenanceInput =
+    input.periods && input.periods.length > 0
+      ? input
+      : { ...input, recentCount: input.compareType === "period" ? 2 : 1 };
   try {
-    // 데이터 조회
-    const results = await cache.getStatisticsData(
-      {
-        orgId: input.orgId,
-        tableId: input.tableId,
-        compareType: input.compareType,
-        periods: input.periods,
-      },
-      async () => {
-        if (input.compareType === 'period' && input.periods) {
-          // 여러 시점 데이터 조회
-          const allResults = [];
-          for (const period of input.periods) {
-            const data = await client.getStatisticsData({
-              orgId: input.orgId,
-              tblId: input.tableId,
-              objL1: input.objL1 || 'ALL',
-              objL2: input.objL2,
-              itmId: input.itemId || 'ALL',
-              prdSe: input.periodType,
-              startPrdDe: period,
-              endPrdDe: period,
-            });
-            allResults.push(...data);
-          }
-          return allResults;
-        } else {
-          // 단일 시점, 여러 항목 조회
-          return client.getStatisticsData({
-            orgId: input.orgId,
-            tblId: input.tableId,
-            objL1: input.objL1 || 'ALL',
-            objL2: input.objL2,
-            itmId: 'ALL',
-            prdSe: input.periodType,
-            newEstPrdCnt: 1,
-          });
-        }
+    if (input.compareType === "period" && input.periods) {
+      const unique = new Set(input.periods);
+      if (unique.size !== input.periods.length) {
+        return failedResult(
+          input,
+          "요청 시점에 중복이 있어 변화율을 계산하지 않았습니다.",
+          [],
+          "unverified",
+          "response_incomplete",
+          queriedAt,
+        );
       }
+    }
+    const retrieval = await retrieveRows(input);
+    if (retrieval.errorCode) {
+      return failedResult(
+        input,
+        retrieval.message ?? "통계 응답 검증에 실패했습니다.",
+        retrieval.rows,
+        "unverified",
+        retrieval.errorCode,
+        queriedAt,
+      );
+    }
+    const validation = validateRows(
+      input,
+      retrieval.rows,
+      input.compareType === "period" ? input.periods : undefined,
     );
+    if (!validation.ok)
+      return failedResult(
+        input,
+        validation.message ?? "통계 응답이 불완전합니다.",
+        validation.rows,
+        "unverified",
+        validation.errorCode,
+        queriedAt,
+      );
 
-    if (results.length === 0) {
+    const items = validation.rows.map((row) =>
+      itemFromRow(row, input.compareType),
+    );
+    const sortedItems = [...items].sort(
+      (a, b) => (b.value as number) - (a.value as number),
+    );
+    sortedItems.forEach((item, index) => {
+      item.rank = index + 1;
+    });
+
+    if (input.compareType === "period") {
+      const ordered = [...items].sort((a, b) =>
+        comparePeriods(a.period, b.period),
+      );
+      for (let index = 1; index < ordered.length; index += 1) {
+        ordered[index].change = changeFor(
+          ordered[index].value as number,
+          ordered[index - 1].value as number,
+        );
+      }
+      const first = ordered[0].value as number;
+      const last = ordered[ordered.length - 1].value as number;
+      const absolute = last - first;
+      const total =
+        first === 0
+          ? `${retrieval.validationLevel === "verified" ? "전체 기간" : "반환된 관측 범위"} 절대 변화: ${formatAbsolute(absolute)} (기준값 0으로 비율 미정)`
+          : `${retrieval.validationLevel === "verified" ? "전체 기간" : "반환된 관측 범위"} 변화: ${changeFor(last, first).formatted}`;
+      const maxChange = ordered
+        .slice(1)
+        .filter((item) => item.change)
+        .sort(
+          (a, b) => Math.abs(b.change!.absolute) - Math.abs(a.change!.absolute),
+        )[0];
+      const insights = [total];
+      if (retrieval.validationLevel !== "verified") {
+        insights.unshift(
+          `검증 수준: ${retrieval.validationLevel} — 반환된 관측을 비교하며 공급자 전체성·최신성은 입증하지 않았습니다.`,
+        );
+      }
+      if (maxChange?.change)
+        insights.push(
+          `가장 큰 절대 변화: ${maxChange.name} (${maxChange.change.formatted})`,
+        );
       return {
         success: true,
         compareType: input.compareType,
-        items: [],
-        summary: '비교할 데이터가 없습니다.',
-        insights: [],
+        validationLevel: retrieval.validationLevel,
+        items,
+        summary:
+          retrieval.validationLevel === "verified"
+            ? `${ordered[0].name}부터 ${ordered[ordered.length - 1].name}까지의 변화를 비교했습니다.`
+            : `반환된 관측 범위(${ordered[0].name}~${ordered[ordered.length - 1].name})의 변화를 비교했습니다.`,
+        insights,
+        provenance: buildStatisticsProvenance(
+          provenanceInput,
+          items.map((item) => ({
+            raw: item.raw!,
+          })),
+          {
+            queryPeriods: input.periods,
+            queriedAt,
+            readAt: new Date().toISOString(),
+            calculated: true,
+            appliedCalculations: [
+              "Each adjacent period absolute change is current - previous.",
+              "Each adjacent percentage change is (current - previous) / abs(previous) * 100; zero baselines retain null rate and absolute change.",
+              "The total comparison uses only the explicitly requested provider periods; it does not infer or fill intermediate periods.",
+              "Items are ranked by observed numeric value without rescaling or reallocation.",
+            ],
+            calculationPolicies: [
+              "Zero baselines retain a null percentage and their absolute change.",
+              "No missing observation is reallocated or rescaled.",
+              "Published provider boundaries are preserved.",
+            ],
+          },
+        ),
       };
     }
 
-    // 비교 항목 생성 (모든 관련 정보 포함)
-    const items: ComparisonItem[] = results.map((r) => {
-      const value = parseFloat(r.DT.replace(/,/g, '')) || 0;
-      const region = r.C1_NM || undefined;
-      const itemName = r.ITM_NM || undefined;
-      const period = r.PRD_DE || undefined;
-      const unit = r.UNIT_NM || undefined;
-
-      // name은 비교 타입에 따라 주요 식별자로 설정
-      // 하지만 모든 정보를 별도 필드로 제공
-      let name: string;
-      if (input.compareType === 'period') {
-        name = period || 'N/A';
-      } else {
-        // item 비교 시: 지역명과 항목명 조합
-        name = [region, itemName].filter(Boolean).join(' - ') || 'N/A';
-      }
-
-      return {
-        name,
-        region,
-        itemName,
-        period,
-        value,
-        formattedValue: r.DT,
-        unit,
-      };
-    });
-
-    // 순위 부여
-    const sortedItems = [...items].sort((a, b) => b.value - a.value);
-    sortedItems.forEach((item, index) => {
-      const original = items.find((i) => i.name === item.name);
-      if (original) {
-        original.rank = index + 1;
-      }
-    });
-
-    // 변화율 계산 (시점 비교인 경우)
-    if (input.compareType === 'period' && items.length > 1) {
-      for (let i = 1; i < items.length; i++) {
-        items[i].change = calculateChangeRate(items[i].value, items[i - 1].value);
-      }
-    }
-
-    // 요약 생성
     const maxItem = sortedItems[0];
     const minItem = sortedItems[sortedItems.length - 1];
-    const summary =
-      input.compareType === 'period'
-        ? `${items[0].name}부터 ${items[items.length - 1].name}까지의 변화를 비교했습니다.`
-        : `총 ${items.length}개 항목 중 "${maxItem.name}"이(가) 가장 높고, "${minItem.name}"이(가) 가장 낮습니다.`;
-
-    // 인사이트 생성
-    const insights: string[] = [];
-
-    if (input.compareType === 'period') {
-      const firstValue = items[0].value;
-      const lastValue = items[items.length - 1].value;
-      const totalChange = calculateChangeRate(lastValue, firstValue);
-      insights.push(
-        `전체 기간 동안 ${totalChange.direction === 'up' ? '증가' : totalChange.direction === 'down' ? '감소' : '변동 없음'} (${totalChange.formatted})`
+    const difference = (maxItem.value as number) - (minItem.value as number);
+    const insights =
+      minItem.value === 0
+        ? [
+            `최대-최소 절대 차이: ${formatAbsolute(difference)} (최솟값 0으로 비율 미정)`,
+          ]
+        : [
+            `최대-최소 차이: ${((difference / Math.abs(minItem.value as number)) * 100).toFixed(1)}%`,
+            `최대-최소 절대 차이: ${formatAbsolute(difference)}`,
+          ];
+    if (retrieval.validationLevel !== "verified") {
+      insights.unshift(
+        `검증 수준: ${retrieval.validationLevel} — 반환된 관측을 비교하며 공급자 전체성·최신성은 입증하지 않았습니다.`,
       );
-
-      const maxChange = items
-        .filter((i) => i.change)
-        .sort((a, b) => Math.abs(b.change!.rate) - Math.abs(a.change!.rate))[0];
-      if (maxChange?.change) {
-        insights.push(
-          `가장 큰 변화: ${maxChange.name} (${maxChange.change.formatted})`
-        );
-      }
-    } else {
-      const diff = ((maxItem.value - minItem.value) / minItem.value * 100).toFixed(1);
-      insights.push(`최대-최소 차이: ${diff}%`);
     }
-
     return {
       success: true,
       compareType: input.compareType,
+      validationLevel: retrieval.validationLevel,
       items,
-      summary,
+      summary: `반환된 ${items.length}개 항목 중 "${maxItem.name}"이(가) 가장 높고, "${minItem.name}"이(가) 가장 낮습니다.`,
       insights,
+      provenance: buildStatisticsProvenance(
+        provenanceInput,
+        items.map((item) => ({
+          raw: item.raw!,
+        })),
+        {
+          queriedAt,
+          readAt: new Date().toISOString(),
+          calculated: true,
+          appliedCalculations: [
+            "Items are ranked by observed numeric value.",
+            "The maximum/minimum difference is max - min; percentage is difference / abs(min) * 100 when the minimum is nonzero.",
+            "No rescaling or reallocation was applied.",
+          ],
+          calculationPolicies: [
+            "Zero baselines retain a null percentage and their absolute difference.",
+            "No missing observation is reallocated or rescaled.",
+            "Published provider boundaries are preserved.",
+          ],
+        },
+      ),
     };
   } catch (error) {
-    console.error('Compare error:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    return {
-      success: false,
-      compareType: input.compareType,
-      items: [],
-      summary: '비교 중 오류가 발생했습니다.',
-      insights: [
-        '## 오류 상세 정보',
-        '',
-        `### 오류 내용: ${errorMessage}`,
-        '',
-        '### 사용된 파라미터',
-        `- orgId: "${input.orgId}"`,
-        `- tableId: "${input.tableId}"`,
-        `- compareType: "${input.compareType}"`,
-        `- objL1: "${input.objL1 || '미지정'}"`,
-        `- itemId: "${input.itemId || '미지정'}"`,
-        input.periods ? `- periods: ${JSON.stringify(input.periods)}` : '',
-        '',
-        '### 해결 방법',
-        '1. **get_table_info 먼저 호출**하여 유효한 코드 확인:',
-        '   ```json',
-        `   { "orgId": "${input.orgId}", "tableId": "${input.tableId}" }`,
-        '   ```',
-        '',
-        '2. **다중 지역 비교 시 형식**:',
-        '   - 개별 호출 후 결과 비교 (권장)',
-        '   - 예: 서울과 부산을 각각 조회하여 비교',
-        '',
-        '3. **시점 비교 시 형식**:',
-        '   - compareType: "period"',
-        '   - periods: ["2020", "2021", "2022", "2023"]',
-      ].filter(Boolean),
-    };
+    const handled = handleToolError(error);
+    const errorCode =
+      handled.code === "UNKNOWN_ERROR" ? "response_incomplete" : handled.code;
+    return failedResult(
+      input,
+      `비교 중 오류가 발생했습니다: ${handled.error}`,
+      [],
+      "unverified",
+      errorCode,
+      queriedAt,
+    );
   }
 }

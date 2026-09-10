@@ -1,0 +1,41 @@
+{
+  "id": "public-locality-detail-v2",
+  "version": 2,
+  "revisionReason": "첫 정식 실행 전 정답 근거 보완: KOSIS가 생략한 중간 시 이름은 다른 공식 제공기관의 정확한 코드·이름 결합으로만 확인한다. 질문·가중치·합격선·거절 기준은 v1과 동일하다.",
+  "purpose": "다른 사용자가 공개 MCP를 연결했을 때 시·군·구와 상세 자료를 정확하고 정직하게 조회하는지 검증한다.",
+  "target": "https://korea-stats-mcp.vercel.app/mcp",
+  "clientAuthentication": "none",
+  "maximumScore": 100,
+  "passScore": 100,
+  "weightsPerCase": { "identity": 3, "value": 3, "completeness": 2, "honesty": 2 },
+  "scoring": {
+    "category": "각 범주의 모든 검사를 통과해야 해당 범주의 점수를 받는다. 부분 점수나 미실행 사례 제외 재계산은 없다.",
+    "positiveRefusal": "answer 사례가 자료를 반환하지 않으면 사유와 무관하게 0점이다. 운영 장애는 BLOCKED, 코드 결함은 FAIL로 구분한다.",
+    "negativeRefusal": "reject 사례만 근거 있는 거절을 정답으로 인정한다. TIMEOUT, 인증 실패, 일반 서버 오류는 올바른 거절이 아니다.",
+    "integrity": "다른 지역으로 대체, 없는 수치 생성, 중복·누락을 숨긴 전체성 주장, 증거 없는 verified 주장은 하나라도 있으면 전체 FAIL이다.",
+    "unavailable": "공급자가 공개하지 않은 자료·복원 불가능한 정보는 공식 근거를 기록해 UNAVAILABLE로 표시한다. 가중치·분모를 바꾸거나 통과 처리하지 않는다. 기술적 불가능, 자료 미제공, 일시 장애를 구분한다.",
+    "immutability": "첫 정식 실행 전에 이 파일의 SHA-256을 기록한다. 실패 후 합격선·질문·기대 결과를 낮추지 않는다. 기준 오류를 수정할 때는 별도 버전과 변경 사유를 보존한다.",
+    "scope": "8개의 실제 답변 문제와 2개의 거절 문제이며, 10개 통과는 전국 모든 통계·모든 시군구의 완전 지원 증명이 아니다. 기존 R1/R2/R3 12/34/48 검사를 대체하지 않는다."
+  },
+  "execution": { "providerTimeoutMs": 8000, "providerMaxBytes": 4194304, "mcpMaxBytes": 32768, "providerRetries": 0, "concurrency": 1, "freshEvidenceDirectoryPerRun": true },
+  "oracle": {
+    "populationTable": { "orgId": "101", "tableId": "DT_1B040A3", "itemId": "T20", "periodType": "Y" },
+    "populationIdentity": "운영 도구와 별개로 공식 KOSIS ITM 메타데이터를 직접 읽어 이름·상위 계층으로 지역을 식별하고, 공식 관측의 C1 코드·명칭으로 매핑을 확인한다. MCP가 반환한 지역 코드를 정답으로 역채택하지 않는다.",
+    "supplementalAffiliation": "KOSIS 관측 연도에 유효한 지역 코드·명칭을 먼저 확인한다. 중간 시 이름 하나만 KOSIS 계층에서 빠진 경우, 단 하나의 후보에 한해 공식 상권 API의 signguCd·ctprvnCd·시도명·시군구 전체 이름을 독립 조회해 정확히 결합한다. 코드 접두사 추론이나 요청 토큰 삭제는 금지한다. 현재 이름의 소속 근거이지 과거 경계의 동일성 근거가 아니다. 정답 후보가 여러 개거나 공식 근거가 없으면 정답 검증 미완료이지 문제 통과가 아니다.",
+    "values": "서버 운영자 키는 독립 공급자 원문 대조에만 사용한다. 공개 MCP 요청에는 키·우회 헤더를 보내지 않는다. 지역·항목·기간별 원관측과 수치를 비교한다.",
+    "birth": "공식 대체 표 DT_1B81A23의 해당 지역·항목·연도 원관측과 대조한다. 단위·정의·비교 가능성이 미확정이면 이를 유지하고 파생 추세를 단정하지 않는다.",
+    "business": "공식 소상공인시장진흥공단 API의 동일 지역·페이지·업종 요청을 독립적으로 호출해 상가 ID와 원문 필드를 비교한다. 제공기관 기준월을 조회 시각이나 안정적 스냅샷으로 바꾸지 않는다."
+  },
+  "cases": [
+    { "id": "B01", "mode": "answer", "kind": "population-pair", "question": "서울 중구와 부산 중구의 2025년 인구를 각각 조회하고 서로 다른 지역임을 증명해라.", "regions": ["서울 중구", "부산 중구"], "officialPaths": [["서울특별시", "중구"], ["부산광역시", "중구"]], "year": 2025 },
+    { "id": "B02", "mode": "answer", "kind": "population-pair", "question": "경기 수원시 영통구와 수원시 전체의 2025년 인구를 구분해 조회해라. 구를 시 전체 값으로 대체하면 안 된다.", "regions": ["경기 수원시 영통구", "경기 수원시"], "officialPaths": [["경기도", "수원시", "영통구"], ["경기도", "수원시"]], "year": 2025 },
+    { "id": "B03", "mode": "answer", "kind": "population", "question": "전남 신안군의 2025년 인구를 조회하고 군 단위 원자료와 대조해라.", "regions": ["전남 신안군"], "officialPaths": [["전라남도", "신안군"]], "year": 2025 },
+    { "id": "B04", "mode": "answer", "kind": "population", "question": "제주 서귀포시의 2025년 인구를 조회하되 제주 전체 값으로 대체하지 마라.", "regions": ["제주 서귀포시"], "officialPaths": [["제주특별자치도", "서귀포시"]], "year": 2025 },
+    { "id": "B05", "mode": "answer", "kind": "population", "question": "대구 편입 이후 군위군의 2025년 인구를 조회하고 현재 공식 소속·지역 코드가 맞는지 확인해라.", "regions": ["대구 군위군"], "officialPaths": [["대구광역시", "군위군"]], "year": 2025 },
+    { "id": "B06", "mode": "answer", "kind": "population-trend", "question": "부산 동래구의 2015~2025년 인구 11개 연도를 빠짐없이 조회하고 관측값·인접 연도 증감 계산을 검증해라. 인구 변화를 청년 유출 원인으로 단정하지 마라.", "regions": ["부산 동래구"], "officialPaths": [["부산광역시", "동래구"]], "startYear": 2015, "endYear": 2025 },
+    { "id": "B07", "mode": "answer", "kind": "birth-trend", "question": "부산 동래구의 2023~2024년 출생아수를 조회하고 원표와 대조해라. 대체 표의 정의·단위·주석 때문에 비교를 보류해야 한다면 그 한계를 밝혀라.", "regions": ["부산 동래구"], "officialPaths": [["부산광역시", "동래구"]], "startYear": 2023, "endYear": 2024 },
+    { "id": "B08", "mode": "answer", "kind": "business-pages", "question": "부산 동래구 상가를 서로 다른 두 페이지로 읽고 중복·누락을 검사한 뒤, 실제 반환 업종 코드로 필터링해 상세 주소·지역·상가 ID를 원문과 대조해라.", "regionType": "signguCd", "regionCode": "26260", "regionName": "동래구", "pageSize": 5, "pages": [1, 2], "industryField": "indsSclsCd" },
+    { "id": "B09", "mode": "reject", "kind": "ambiguous-region", "question": "중구의 2025년 인구를 알려줘. 상위 시도가 없으므로 임의의 중구를 골라 답하지 마라.", "region": "중구", "year": 2025, "expected": "지역 모호성을 설명하고 상위 지역 확인을 요구한다. 수치와 verified 성공을 반환하지 않는다." },
+    { "id": "B10", "mode": "reject", "kind": "nonexistent-region", "question": "부산 없는군의 2025년 인구를 알려줘. 존재하지 않는 지역을 부산·전국으로 대체하지 마라.", "region": "부산 없는군", "year": 2025, "expected": "공식 지역을 식별하지 못했다고 명시한다. 수치와 verified 성공을 반환하지 않는다." }
+  ]
+}

@@ -14,11 +14,7 @@ import { writeFileSync } from 'fs';
 // 환경 변수 로드
 config();
 
-const API_KEY = process.env.KOSIS_API_KEY;
-if (!API_KEY) {
-  console.error('❌ KOSIS_API_KEY 환경 변수가 설정되지 않았습니다.');
-  process.exit(1);
-}
+const API_KEY = process.env.KOSIS_API_KEY?.trim();
 
 // 키워드 정의 (quickStatsParams.ts에서 추출)
 const KEYWORDS = [
@@ -71,6 +67,7 @@ const KEYWORDS = [
 const REGIONS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종',
                  '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
 
+const SAMPLE_REGIONS = ['서울', '부산', '제주'];
 // 지역별 조회 지원 키워드 (regionCodes가 있는 키워드)
 const REGION_KEYWORDS = [
   '인구', '총인구', '출산율', '합계출산율', '실업률', '고용률',
@@ -109,10 +106,10 @@ const QUARTERLY_KEYWORDS = [
 
 // 결과 저장
 const results = {
-  basic: { success: [], fail: [] },
-  regional: { success: [], fail: [] },
-  monthly: { success: [], fail: [] },
-  quarterly: { success: [], fail: [] },
+  basic: { expected: KEYWORDS.length, executed: 0, success: [], fail: [], skipped: 0 },
+  regional: { expected: REGION_KEYWORDS.length * SAMPLE_REGIONS.length, executed: 0, success: [], fail: [], skipped: 0 },
+  monthly: { expected: MONTHLY_KEYWORDS.length, executed: 0, success: [], fail: [], skipped: 0 },
+  quarterly: { expected: QUARTERLY_KEYWORDS.length, executed: 0, success: [], fail: [], skipped: 0 },
 };
 
 // MCP 서버 프로세스
@@ -130,27 +127,34 @@ function startServer() {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    let initialized = false;
+    let settled = false;
+    const startupTimeout = setTimeout(() => {
+      if (!settled) finish(new Error('MCP server startup timed out'));
+    }, 10_000);
 
-    mcpProcess.stderr.on('data', (data) => {
-      const msg = data.toString();
-      if (msg.includes('KOSIS MCP Server started') || msg.includes('Server running')) {
-        if (!initialized) {
-          initialized = true;
-          setTimeout(resolve, 500);
-        }
-      }
-    });
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(startupTimeout);
+      mcpProcess?.stderr.removeListener('data', onStderr);
+      mcpProcess?.removeListener('error', onError);
+      mcpProcess?.removeListener('close', onClose);
+      if (error) reject(error);
+      else resolve();
+    };
 
-    mcpProcess.on('error', reject);
+    const onStderr = (data) => {
+      // dist/index.ts emits this only after the stdio server is connected.
+      if (data.toString().includes('Korea Stats MCP:')) finish();
+    };
+    const onError = (error) => finish(error);
+    const onClose = (code) => {
+      if (!settled) finish(new Error(`MCP server exited before readiness (code ${code ?? 'unknown'})`));
+    };
 
-    // 3초 후 타임아웃
-    setTimeout(() => {
-      if (!initialized) {
-        initialized = true;
-        resolve();
-      }
-    }, 3000);
+    mcpProcess.stderr.on('data', onStderr);
+    mcpProcess.once('error', onError);
+    mcpProcess.once('close', onClose);
   });
 }
 
@@ -159,18 +163,31 @@ function startServer() {
  */
 async function sendRequest(method, params) {
   return new Promise((resolve, reject) => {
+    if (!mcpProcess || mcpProcess.killed || !mcpProcess.stdin || !mcpProcess.stdout) {
+      reject(new Error('MCP server is not ready'));
+      return;
+    }
+
     const request = {
       jsonrpc: '2.0',
       id: Date.now(),
       method,
       params,
     };
-
     let responseData = '';
+    let settled = false;
 
-    const timeout = setTimeout(() => {
-      reject(new Error('Request timeout'));
-    }, 30000);
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      mcpProcess?.stdout.removeListener('data', onData);
+      mcpProcess?.removeListener('close', onClose);
+      if (error) reject(error);
+      else resolve(value);
+    };
+
+    const timeout = setTimeout(() => finish(new Error('Request timeout')), 30_000);
 
     const onData = (data) => {
       responseData += data.toString();
@@ -179,24 +196,34 @@ async function sendRequest(method, params) {
       try {
         const lines = responseData.split('\n').filter(l => l.trim());
         for (const line of lines) {
-          if (line.startsWith('{')) {
-            const json = JSON.parse(line);
-            if (json.id === request.id) {
-              clearTimeout(timeout);
-              mcpProcess.stdout.removeListener('data', onData);
-              resolve(json);
-              return;
-            }
+          if (!line.startsWith('{')) continue;
+          const json = JSON.parse(line);
+          if (json.id === request.id) {
+            finish(null, json);
+            return;
           }
         }
-      } catch (e) {
-        // 계속 대기
+      } catch {
+        // 불완전한 JSON은 다음 chunk에서 다시 시도한다.
       }
     };
+    const onClose = (code) => finish(new Error(`MCP server exited during request (code ${code ?? 'unknown'})`));
 
     mcpProcess.stdout.on('data', onData);
-    mcpProcess.stdin.write(JSON.stringify(request) + '\n');
+    mcpProcess.once('close', onClose);
+    try {
+      mcpProcess.stdin.write(JSON.stringify(request) + '\n');
+    } catch (error) {
+      finish(error);
+    }
   });
+}
+function usableQuickStatsResult(result) {
+  return result &&
+    typeof result === 'object' &&
+    result.success === true &&
+    typeof result.answer === 'string' &&
+    result.answer.trim().length > 0;
 }
 
 /**
@@ -227,7 +254,7 @@ async function callQuickStats(query, region = null, period = null, month = null,
     const result = JSON.parse(content);
     return result;
   } catch (e) {
-    return { success: false, error: e.message };
+    return { success: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
 
@@ -235,9 +262,31 @@ async function callQuickStats(query, region = null, period = null, month = null,
  * 진행상황 출력
  */
 function printProgress(current, total, label) {
-  const pct = Math.round((current / total) * 100);
+  const pct = total > 0 ? Math.round((current / total) * 100) : 0;
   const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
   process.stdout.write(`\r[${bar}] ${pct}% - ${label}                    `);
+}
+function failureReason(result) {
+  if (!result || typeof result !== 'object') return 'No usable live data';
+  return result.answer || result.error || 'No usable live data';
+}
+
+function recordResult(cohort, details, result) {
+  cohort.executed += 1;
+  if (usableQuickStatsResult(result)) {
+    cohort.success.push({ ...details, answer: result.answer.substring(0, 50) });
+  } else {
+    cohort.fail.push({ ...details, error: failureReason(result) });
+  }
+}
+function requirePrerequisites() {
+  const missing = [];
+  if (!API_KEY) missing.push('KOSIS_API_KEY');
+  if (KEYWORDS.length === 0) missing.push('basic keyword cohort');
+  if (REGION_KEYWORDS.length === 0 || SAMPLE_REGIONS.length === 0) missing.push('regional cohort');
+  if (MONTHLY_KEYWORDS.length === 0) missing.push('monthly keyword cohort');
+  if (QUARTERLY_KEYWORDS.length === 0) missing.push('quarterly keyword cohort');
+  if (missing.length > 0) throw new Error(`Test prerequisite failed: ${missing.join(', ')}`);
 }
 
 /**
@@ -246,12 +295,14 @@ function printProgress(current, total, label) {
 async function runTests() {
   console.log('\n📊 korea-stats-mcp 전체 키워드 종합 테스트\n');
   console.log(`총 키워드: ${KEYWORDS.length}개`);
-  console.log(`지역 지원: ${REGION_KEYWORDS.length}개`);
+  console.log(`지역 지원: ${REGION_KEYWORDS.length}개 × 샘플 지역 ${SAMPLE_REGIONS.length}개`);
   console.log(`월간 지원: ${MONTHLY_KEYWORDS.length}개`);
   console.log(`분기 지원: ${QUARTERLY_KEYWORDS.length}개`);
   console.log('─'.repeat(60));
 
+  let executionError = null;
   try {
+    requirePrerequisites();
     await startServer();
     console.log('✅ MCP 서버 시작 완료\n');
 
@@ -261,41 +312,25 @@ async function runTests() {
 
     for (let i = 0; i < KEYWORDS.length; i++) {
       const keyword = KEYWORDS[i];
-      printProgress(i + 1, KEYWORDS.length, keyword);
-
+      printProgress(i + 1, results.basic.expected, keyword);
       const result = await callQuickStats(keyword);
-
-      if (result.success) {
-        results.basic.success.push({ keyword, answer: result.answer?.substring(0, 50) });
-      } else {
-        results.basic.fail.push({ keyword, error: result.answer || result.error });
-      }
-
+      recordResult(results.basic, { keyword }, result);
       await sleep(100); // API 호출 제한 방지
     }
     console.log('\n');
 
     // 2. 지역별 테스트 (샘플링: 서울, 부산, 제주)
-    console.log('\n📌 [2/4] 지역별 조회 테스트 (서울, 부산, 제주)');
+    console.log(`\n📌 [2/4] 지역별 조회 테스트 (${SAMPLE_REGIONS.join(', ')})`);
     console.log('─'.repeat(60));
 
-    const sampleRegions = ['서울', '부산', '제주'];
-    const regionalTests = REGION_KEYWORDS.length * sampleRegions.length;
     let regionalCount = 0;
-
     for (const keyword of REGION_KEYWORDS) {
-      for (const region of sampleRegions) {
+      for (const region of SAMPLE_REGIONS) {
         regionalCount++;
-        printProgress(regionalCount, regionalTests, `${region} ${keyword}`);
+        printProgress(regionalCount, results.regional.expected, `${region} ${keyword}`);
 
         const result = await callQuickStats(`${region} ${keyword}`, region);
-
-        if (result.success) {
-          results.regional.success.push({ keyword, region, answer: result.answer?.substring(0, 50) });
-        } else {
-          results.regional.fail.push({ keyword, region, error: result.answer || result.error });
-        }
-
+        recordResult(results.regional, { keyword, region }, result);
         await sleep(100);
       }
     }
@@ -307,16 +342,10 @@ async function runTests() {
 
     for (let i = 0; i < MONTHLY_KEYWORDS.length; i++) {
       const keyword = MONTHLY_KEYWORDS[i];
-      printProgress(i + 1, MONTHLY_KEYWORDS.length, keyword);
+      printProgress(i + 1, results.monthly.expected, keyword);
 
       const result = await callQuickStats(keyword, null, 'M');
-
-      if (result.success) {
-        results.monthly.success.push({ keyword, answer: result.answer?.substring(0, 50) });
-      } else {
-        results.monthly.fail.push({ keyword, error: result.answer || result.error });
-      }
-
+      recordResult(results.monthly, { keyword }, result);
       await sleep(100);
     }
     console.log('\n');
@@ -327,97 +356,88 @@ async function runTests() {
 
     for (let i = 0; i < QUARTERLY_KEYWORDS.length; i++) {
       const keyword = QUARTERLY_KEYWORDS[i];
-      printProgress(i + 1, QUARTERLY_KEYWORDS.length, keyword);
+      printProgress(i + 1, results.quarterly.expected, keyword);
 
       const result = await callQuickStats(keyword, null, 'Q');
-
-      if (result.success) {
-        results.quarterly.success.push({ keyword, answer: result.answer?.substring(0, 50) });
-      } else {
-        results.quarterly.fail.push({ keyword, error: result.answer || result.error });
-      }
-
+      recordResult(results.quarterly, { keyword }, result);
       await sleep(100);
     }
     console.log('\n');
-
   } catch (error) {
-    console.error('테스트 실행 중 오류:', error);
+    executionError = error instanceof Error ? error : new Error(String(error));
+    console.error('테스트 실행 중 오류:', executionError.message);
   } finally {
     if (mcpProcess) {
       mcpProcess.kill();
+      mcpProcess = null;
     }
   }
 
   // 결과 출력
   printResults();
+
+  const cohorts = [results.basic, results.regional, results.monthly, results.quarterly];
+  const complete = !executionError && cohorts.every(cohort =>
+    cohort.expected > 0 &&
+    cohort.executed === cohort.expected &&
+    cohort.success.length === cohort.expected &&
+    cohort.skipped === 0 &&
+    cohort.fail.length === 0
+  );
+  if (!complete) {
+    process.exitCode = 1;
+    console.error('종합 테스트 실패: 모든 계획된 케이스가 실행되고 usable live data를 반환해야 합니다.');
+  }
+  return complete;
 }
 
 /**
  * 결과 출력
  */
+function printCohort(label, cohort, formatFailure) {
+  const notRun = Math.max(cohort.expected - cohort.executed, 0);
+  const pct = cohort.expected > 0 ? Math.round((cohort.success.length / cohort.expected) * 100) : 0;
+  console.log(
+    `\n${label}: ${cohort.success.length}/${cohort.expected} (${pct}%)` +
+    ` (실행 ${cohort.executed}, 실패 ${cohort.fail.length}, skip ${cohort.skipped}, 미실행 ${notRun})`
+  );
+  if (cohort.fail.length > 0) {
+    console.log('   ❌ 실패:');
+    cohort.fail.forEach(f => console.log(`      - ${formatFailure(f)}: ${String(f.error).slice(0, 60)}`));
+  }
+}
+
 function printResults() {
   console.log('\n');
   console.log('═'.repeat(60));
   console.log('📊 테스트 결과 요약');
   console.log('═'.repeat(60));
 
-  // 기본 테스트
-  const basicTotal = results.basic.success.length + results.basic.fail.length;
-  const basicPct = basicTotal > 0 ? Math.round((results.basic.success.length / basicTotal) * 100) : 0;
-  console.log(`\n[1] 기본 조회: ${results.basic.success.length}/${basicTotal} (${basicPct}%)`);
-  if (results.basic.fail.length > 0) {
-    console.log('   ❌ 실패:');
-    results.basic.fail.forEach(f => console.log(`      - ${f.keyword}: ${f.error?.substring(0, 60)}`));
-  }
+  printCohort('[1] 기본 조회', results.basic, f => f.keyword);
+  printCohort('[2] 지역별 조회', results.regional, f => `${f.region} ${f.keyword}`);
+  printCohort('[3] 월간 조회', results.monthly, f => f.keyword);
+  printCohort('[4] 분기별 조회', results.quarterly, f => f.keyword);
 
-  // 지역별 테스트
-  const regTotal = results.regional.success.length + results.regional.fail.length;
-  const regPct = regTotal > 0 ? Math.round((results.regional.success.length / regTotal) * 100) : 0;
-  console.log(`\n[2] 지역별 조회: ${results.regional.success.length}/${regTotal} (${regPct}%)`);
-  if (results.regional.fail.length > 0) {
-    console.log('   ❌ 실패:');
-    results.regional.fail.slice(0, 10).forEach(f =>
-      console.log(`      - ${f.region} ${f.keyword}: ${f.error?.substring(0, 50)}`));
-    if (results.regional.fail.length > 10) {
-      console.log(`      ... 외 ${results.regional.fail.length - 10}건`);
-    }
-  }
-
-  // 월간 테스트
-  const monthTotal = results.monthly.success.length + results.monthly.fail.length;
-  const monthPct = monthTotal > 0 ? Math.round((results.monthly.success.length / monthTotal) * 100) : 0;
-  console.log(`\n[3] 월간 조회: ${results.monthly.success.length}/${monthTotal} (${monthPct}%)`);
-  if (results.monthly.fail.length > 0) {
-    console.log('   ❌ 실패:');
-    results.monthly.fail.forEach(f => console.log(`      - ${f.keyword}: ${f.error?.substring(0, 60)}`));
-  }
-
-  // 분기 테스트
-  const qtrTotal = results.quarterly.success.length + results.quarterly.fail.length;
-  const qtrPct = qtrTotal > 0 ? Math.round((results.quarterly.success.length / qtrTotal) * 100) : 0;
-  console.log(`\n[4] 분기별 조회: ${results.quarterly.success.length}/${qtrTotal} (${qtrPct}%)`);
-  if (results.quarterly.fail.length > 0) {
-    console.log('   ❌ 실패:');
-    results.quarterly.fail.forEach(f => console.log(`      - ${f.keyword}: ${f.error?.substring(0, 60)}`));
-  }
-
-  // 전체 요약
-  const totalSuccess = results.basic.success.length + results.regional.success.length +
-                       results.monthly.success.length + results.quarterly.success.length;
-  const totalFail = results.basic.fail.length + results.regional.fail.length +
-                    results.monthly.fail.length + results.quarterly.fail.length;
-  const totalTests = totalSuccess + totalFail;
-  const totalPct = totalTests > 0 ? Math.round((totalSuccess / totalTests) * 100) : 0;
+  const cohorts = [results.basic, results.regional, results.monthly, results.quarterly];
+  const totalExpected = cohorts.reduce((sum, cohort) => sum + cohort.expected, 0);
+  const totalExecuted = cohorts.reduce((sum, cohort) => sum + cohort.executed, 0);
+  const totalSuccess = cohorts.reduce((sum, cohort) => sum + cohort.success.length, 0);
+  const totalFail = cohorts.reduce((sum, cohort) => sum + cohort.fail.length, 0);
+  const totalSkipped = cohorts.reduce((sum, cohort) => sum + cohort.skipped, 0);
+  const totalNotRun = Math.max(totalExpected - totalExecuted, 0);
+  const totalPct = totalExpected > 0 ? Math.round((totalSuccess / totalExpected) * 100) : 0;
 
   console.log('\n' + '═'.repeat(60));
-  console.log(`📈 전체 결과: ${totalSuccess}/${totalTests} (${totalPct}%)`);
+  console.log(
+    `📈 전체 결과: ${totalSuccess}/${totalExpected} (${totalPct}%)` +
+    ` (실행 ${totalExecuted}, 실패 ${totalFail}, skip ${totalSkipped}, 미실행 ${totalNotRun})`
+  );
   console.log('═'.repeat(60));
 
-  if (totalFail === 0) {
+  if (totalFail === 0 && totalSkipped === 0 && totalNotRun === 0 && totalExpected > 0) {
     console.log('\n🎉 모든 테스트 통과!\n');
   } else {
-    console.log(`\n⚠️ ${totalFail}건 실패\n`);
+    console.log(`\n⚠️ 실패 ${totalFail}건, skip ${totalSkipped}건, 미실행 ${totalNotRun}건\n`);
   }
 
   // JSON 결과 저장
@@ -430,4 +450,9 @@ function sleep(ms) {
 }
 
 // 실행
-runTests().catch(console.error);
+runTests().then(passed => {
+  if (!passed) process.exitCode = 1;
+}).catch(error => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

@@ -1,86 +1,139 @@
 /**
- * MCP Resources 및 Prompts 테스트
- * MCP Inspector v0.18.0+ UI에 맞춤
+ * MCP resource and prompt tests for the installed MCP Inspector 2.5 UI.
+ *
+ * Resource assertions read the returned payload through the Inspector's Copy
+ * action. The virtualized editor is intentionally not treated as the document.
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, copyInspectorText } from "./fixtures";
 
-// MCP Inspector에 연결하는 헬퍼 함수 (v0.18.0+ 호환)
-async function connectToMCPServer(page: Page): Promise<boolean> {
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
+const RESOURCES = [
+  {
+    name: "category-tree",
+    uri: "kosis://categories/tree",
+    verify(payload: Record<string, unknown>): void {
+      expect(payload.name).toBe("정적 참고용 KOSIS 통계 분류 안내");
+      expect(payload.description).toBe(
+        "통계 탐색을 위한 정적 분류 안내이며 공식 전체 분류의 실시간 조회가 아닙니다.",
+      );
+      expect(payload.metadataStatus).toBe("static_reference");
+      expect(payload.lastUpdatedSemantics).toBe(
+        "안내를 생성한 날짜이며, 공식 분류의 갱신 시점이 아닙니다.",
+      );
+      expect(Array.isArray(payload.categories)).toBe(true);
+      expect((payload.categories as unknown[]).length).toBeGreaterThan(0);
+    },
+  },
+  {
+    name: "key-indicators",
+    uri: "kosis://indicators/list",
+    verify(payload: Record<string, unknown>): void {
+      expect(payload.name).toBe("주요 경제사회 지표");
+      expect(typeof payload.description).toBe("string");
+      expect((payload.description as string).length).toBeGreaterThan(0);
+      expect(payload.metadataStatus).toBe("static_reference");
+      expect(payload.lastUpdatedSemantics).toBe(
+        "목록을 생성한 날짜이며, 통계값의 최신 시점이 아닙니다.",
+      );
+      expect(Array.isArray(payload.indicators)).toBe(true);
+      const indicators = payload.indicators as Array<Record<string, unknown>>;
+      expect(indicators.length).toBeGreaterThan(0);
+      expect(indicators.some((indicator) => indicator.name === "총인구")).toBe(
+        true,
+      );
+    },
+  },
+] as const;
 
-  // Connect 버튼 클릭
-  const connectButton = page.getByRole('button', { name: 'Connect' });
-  await connectButton.click();
+const PROMPT_NAMES = ["statistics_assistant"] as const;
 
-  // 연결 성공 확인 (Resources 탭이 나타나면 성공)
-  try {
-    await expect(page.locator('button:has-text("Resources"), [role="tab"]:has-text("Resources")').first()).toBeVisible({
-      timeout: 15000,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+async function openResources(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  const resourcesTab = page
+    .getByRole("banner")
+    .getByText("Resources", { exact: true });
+  await expect(resourcesTab).toBeVisible({ timeout: 5_000 });
+  await resourcesTab.click();
+  await expect(
+    page.getByRole("radio", { name: "Resources", exact: true }),
+  ).toBeChecked();
+  const screen = page.getByTestId("resources-screen");
+  await expect(screen).toBeVisible({ timeout: 5_000 });
+  await expect(screen).toHaveAttribute(
+    "data-resource-count",
+    String(RESOURCES.length),
+    {
+      timeout: 15_000,
+    },
+  );
 }
 
-test.describe('MCP Resources 테스트', () => {
-  test.beforeEach(async ({ page }) => {
-    const connected = await connectToMCPServer(page);
-    if (!connected) {
-      test.skip(true, 'MCP 서버 연결 필요 - 세션 토큰 설정 확인');
-    }
+async function readResource(
+  page: import("@playwright/test").Page,
+  resource: (typeof RESOURCES)[number],
+): Promise<Record<string, unknown>> {
+  const resourceButton = page.getByRole("button", {
+    name: resource.name,
+    exact: true,
   });
-
-  test('리소스 목록 확인', async ({ page }) => {
-    // Resources 탭 클릭
-    const resourcesTab = page.locator('button:has-text("Resources")').first();
-    await resourcesTab.click();
-
-    // 리소스 목록 버튼 또는 리소스가 표시되는지 확인
-    const listButton = page.locator('button:has-text("List")').first();
-    if (await listButton.isVisible()) {
-      await listButton.click();
-      await page.waitForTimeout(3000);
-    }
-
-    // 리소스가 표시되는지 확인 (URI 패턴)
-    await expect(page.locator('text=/kosis|category|indicator/i').first()).toBeVisible({ timeout: 10000 });
+  const uriSection = page.getByRole("button", {
+    name: `URIs (${RESOURCES.length})`,
+    exact: true,
   });
+  await expect(uriSection).toBeVisible({ timeout: 5_000 });
+  if (!(await resourceButton.isVisible())) await uriSection.click();
+  await expect(resourceButton).toBeVisible({ timeout: 5_000 });
+  await resourceButton.click();
 
-  test('카테고리 트리 리소스 확인', async ({ page }) => {
-    // Resources 탭 클릭
-    await page.locator('button:has-text("Resources")').first().click();
+  const preview = page.getByTestId("resource-preview");
+  await expect(preview).toBeVisible({ timeout: 15_000 });
+  await expect(preview.getByText(resource.uri, { exact: true })).toBeVisible();
+  const copies = preview.getByRole("button", { name: "Copy", exact: true });
+  // Inspector 2.5 renders URI copy first, then the complete JSON document copy.
+  await expect(copies).toHaveCount(2);
+  return JSON.parse(await copyInspectorText(page, copies.last())) as Record<
+    string,
+    unknown
+  >;
+}
 
-    // List 버튼 클릭 (있는 경우)
-    const listButton = page.locator('button:has-text("List")').first();
-    if (await listButton.isVisible()) {
-      await listButton.click();
-      await page.waitForTimeout(3000);
+test.describe("MCP Resources 테스트", () => {
+  test("리소스 목록과 실제 반환 내용 확인", async ({ connectedPage }) => {
+    await openResources(connectedPage);
+
+    for (const resource of RESOURCES) {
+      const payload = await readResource(connectedPage, resource);
+      resource.verify(payload);
     }
-
-    // category-tree 리소스 확인
-    await expect(page.locator('text=/category.*tree|categories/i').first()).toBeVisible({ timeout: 10000 });
   });
 });
 
-test.describe('MCP Prompts 테스트', () => {
-  test.beforeEach(async ({ page }) => {
-    const connected = await connectToMCPServer(page);
-    if (!connected) {
-      test.skip(true, 'MCP 서버 연결 필요 - 세션 토큰 설정 확인');
-    }
-  });
-
-  test('프롬프트 목록 확인', async ({ page }) => {
-    // Prompts 탭 클릭
-    const promptsTab = page.locator('button:has-text("Prompts")').first();
+test.describe("MCP Prompts 테스트", () => {
+  test("프롬프트 목록 확인", async ({ connectedPage }) => {
+    const promptsTab = connectedPage
+      .getByRole("banner")
+      .getByText("Prompts", { exact: true });
+    await expect(promptsTab).toBeVisible({ timeout: 5_000 });
     await promptsTab.click();
+    await expect(
+      connectedPage.getByRole("radio", { name: "Prompts", exact: true }),
+    ).toBeChecked();
 
-    // statistics_assistant 프롬프트 확인
-    await expect(page.locator('text=/statistics.*assistant|assistant/i').first()).toBeVisible({
-      timeout: 10000,
-    });
+    const screen = connectedPage.getByTestId("prompts-screen");
+    await expect(screen).toBeVisible({ timeout: 5_000 });
+    await expect(screen).toHaveAttribute(
+      "data-prompt-count",
+      String(PROMPT_NAMES.length),
+      {
+        timeout: 15_000,
+      },
+    );
+    await expect(
+      connectedPage.getByRole("button", {
+        name: new RegExp(PROMPT_NAMES[0]),
+        exact: false,
+      }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "installCommand": "pnpm install --store-dir /tmp/.pnpm-store",
+  "regions": ["icn1"],
+  "installCommand": "pnpm install --frozen-lockfile --store-dir /tmp/.pnpm-store",
   "buildCommand": "pnpm run build && rm -rf .pnpm-store",
   "outputDirectory": ".",
   "rewrites": [
