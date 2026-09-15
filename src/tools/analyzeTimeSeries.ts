@@ -19,7 +19,7 @@ import { handleToolError } from "../utils/errorHandler.js";
 export const analyzeTimeSeriesSchema = {
   name: "analyze_time_series",
   description:
-    "통계 데이터의 시계열 추세를 분석합니다. 증가/감소/안정/변동 추세와 성장률을 계산합니다. 중요: 먼저 get_table_info로 유효한 objL1, objL2, itemId 값을 확인한 후 호출하세요.",
+    "통계 데이터의 시계열 추세를 분석합니다. 증가/감소/안정/변동 추세와 성장률을 계산합니다. 중요: 먼저 get_table_info로 유효한 objL1, objL2 값을 확인하세요. itemId는 통계표에 항목(ITEM) 분류가 있을 때만 지정합니다.",
   inputSchema: z.object({
     orgId: z.string().describe("기관 ID"),
     tableId: z.string().describe("통계표 ID"),
@@ -31,7 +31,12 @@ export const analyzeTimeSeriesSchema = {
     objL6: z.string().optional().describe("분류6 코드 (선택)"),
     objL7: z.string().optional().describe("분류7 코드 (선택)"),
     objL8: z.string().optional().describe("분류8 코드 (선택)"),
-    itemId: z.string().describe("항목 ID (필수)"),
+    itemId: z
+      .string()
+      .optional()
+      .describe(
+        "항목 ID (선택) - get_table_info ITM 응답에 OBJ_ID가 ITEM인 행이 있으면 지정한다. 항목 분류가 없는 통계표는 생략한다",
+      ),
     periodType: z.enum(["Y", "M", "Q"]).describe("주기: Y(년), M(월), Q(분기)"),
     yearCount: z
       .number()
@@ -219,7 +224,11 @@ function validateSeries(
     const item = text(raw.ITM_ID);
     if (!item)
       return { ok: false, message: "응답 항목 식별자가 없습니다.", rows };
-    if (!isOpaqueSelector(input.itemId) && item !== input.itemId)
+    if (
+      input.itemId !== undefined &&
+      !isOpaqueSelector(input.itemId) &&
+      item !== input.itemId
+    )
       return {
         ok: false,
         message: "응답 항목이 요청 항목과 다릅니다.",
