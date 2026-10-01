@@ -221,8 +221,10 @@ function validateSeries(
         errorCode: "response_incomplete",
         rows,
       };
+    // 항목(ITEM) 분류가 없는 통계표는 응답 행에 ITM_ID 자체가 없다. itemId 를 지정하지 않은
+    // 요청에서만 이를 허용하고, 지정했는데 식별자가 없으면 요청 항목을 확인할 수 없으므로 거부한다.
     const item = text(raw.ITM_ID);
-    if (!item)
+    if (!item && input.itemId !== undefined)
       return { ok: false, message: "응답 항목 식별자가 없습니다.", rows };
     if (
       input.itemId !== undefined &&
@@ -279,7 +281,8 @@ function validateSeries(
         rows,
       };
     categories.add(classificationKey(raw));
-    itemIds.add(item);
+    // 식별자 없는 행도 하나의 값으로 센다. 항목 있는 행과 섞이면 아래 size 검사가 막는다.
+    itemIds.add(item ?? "");
     periods.add(period);
     units.add(unit);
   }

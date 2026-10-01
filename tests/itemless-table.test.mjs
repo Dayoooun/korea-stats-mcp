@@ -139,3 +139,77 @@ test("analyze_time_series also accepts item-less tables", async () => {
   assert.equal(parsed.success, true);
   assert.equal(parsed.data?.itemId, undefined);
 });
+
+// 스키마만 통과하고 실행에서 막히는 경우를 잡으려면 analyzeTimeSeries 를 실제로 돌려야 한다.
+const seriesRows = (rows) => {
+  globalThis.fetch = async (input) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    calls.push(url);
+    return new Response(JSON.stringify(rows), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+};
+const itemlessYear = (year, value) => ({
+  ...ITEMLESS_ROW,
+  PRD_DE: year,
+  DT: value,
+});
+const seriesQuery = {
+  orgId: "101",
+  tableId: "ITEMLESS",
+  objL1: "21",
+  objL2: "I",
+  periodType: "Y",
+  startPeriod: "2022",
+  endPeriod: "2024",
+};
+
+test("analyze_time_series analyses an item-less table when itemId is omitted", async () => {
+  const { analyzeTimeSeries } =
+    await import("../dist/tools/analyzeTimeSeries.js");
+  getCacheManager().flush();
+  calls.length = 0;
+  seriesRows([
+    itemlessYear("2022", "40000"),
+    itemlessYear("2023", "42000"),
+    itemlessYear("2024", "45678"),
+  ]);
+
+  const result = await analyzeTimeSeries(seriesQuery);
+
+  assert.equal(result.success, true, JSON.stringify(result.errorCode));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].searchParams.has("itmId"), false);
+});
+
+test("analyze_time_series still rejects a missing item identity when itemId was requested", async () => {
+  const { analyzeTimeSeries } =
+    await import("../dist/tools/analyzeTimeSeries.js");
+  getCacheManager().flush();
+  seriesRows([
+    itemlessYear("2022", "40000"),
+    itemlessYear("2023", "42000"),
+    itemlessYear("2024", "45678"),
+  ]);
+
+  const result = await analyzeTimeSeries({ ...seriesQuery, itemId: "T10" });
+
+  assert.equal(result.success, false);
+});
+
+test("analyze_time_series rejects item-less rows mixed with itemised rows", async () => {
+  const { analyzeTimeSeries } =
+    await import("../dist/tools/analyzeTimeSeries.js");
+  getCacheManager().flush();
+  seriesRows([
+    itemlessYear("2022", "40000"),
+    { ...itemlessYear("2023", "42000"), ITM_ID: "T10", ITM_NM: "사업체수" },
+    itemlessYear("2024", "45678"),
+  ]);
+
+  const result = await analyzeTimeSeries(seriesQuery);
+
+  assert.equal(result.success, false);
+});
