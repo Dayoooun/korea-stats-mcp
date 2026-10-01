@@ -17,7 +17,7 @@ export type StatisticsDataPageQuery = {
   objL6?: string;
   objL7?: string;
   objL8?: string;
-  itemId: string;
+  itemId?: string;
   periodType: string;
   startPeriod?: string;
   endPeriod?: string;

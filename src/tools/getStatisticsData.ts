@@ -35,7 +35,7 @@ import type { SimplifiedDataItem } from "../api/types.js";
 export const getStatisticsDataSchema = {
   name: "get_statistics_data",
   description:
-    "특정 통계표의 실제 데이터를 조회합니다. 중요: 먼저 get_table_info로 유효한 objL1, itemId 값을 확인한 후 호출하세요.",
+    "특정 통계표의 실제 데이터를 조회합니다. 중요: 먼저 get_table_info로 유효한 objL1 값을 확인하세요. itemId는 통계표에 항목(ITEM) 분류가 있을 때만 지정합니다.",
   inputSchema: z.object({
     orgId: z.string().describe("기관 ID (예: 101)"),
     tableId: z.string().describe("통계표 ID (예: DT_1B04005)"),
@@ -51,7 +51,10 @@ export const getStatisticsDataSchema = {
     objL8: z.string().optional().describe("분류8 코드 (선택)"),
     itemId: z
       .string()
-      .describe("항목 ID (필수) - get_table_info로 유효한 값 조회 필요"),
+      .optional()
+      .describe(
+        "항목 ID (선택) - get_table_info ITM 응답에 OBJ_ID가 ITEM인 행이 있으면 지정한다. 항목 분류가 없는 통계표는 생략한다",
+      ),
     periodType: z
       .enum(["Y", "M", "Q", "S", "D", "F", "IR"])
       .describe(
